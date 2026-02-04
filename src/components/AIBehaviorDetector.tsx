@@ -1,9 +1,19 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { aiDetector, BehaviorResult } from '../lib/ai-detector'
+import type { BehaviorResult } from '../lib/ai-detector'
 import { addBehaviorEntry } from './BehaviorHistoryPanel'
 import { addStudentBehavior } from './StudentsBehaviorPanel'
+
+// Lazy load AI detector to avoid build issues
+let aiDetector: any = null
+const loadAIDetector = async () => {
+  if (!aiDetector && typeof window !== 'undefined') {
+    const module = await import('../lib/ai-detector')
+    aiDetector = module.aiDetector
+  }
+  return aiDetector
+}
 
 interface Props {
   enabled?: boolean
@@ -38,7 +48,10 @@ export default function AIBehaviorDetector({ enabled = true, userId = '', userNa
     if (!video) return
 
     videoRef.current = video
-    const result = await aiDetector.detect(video)
+    const detector = await loadAIDetector()
+    if (!detector) return
+    
+    const result = await detector.detect(video)
     if (result) {
       setBehavior(result)
       // Add to history panel
@@ -76,7 +89,14 @@ export default function AIBehaviorDetector({ enabled = true, userId = '', userNa
       setError(null)
 
       try {
-        const success = await aiDetector.initialize()
+        const detector = await loadAIDetector()
+        if (!detector) {
+          setError('Không thể tải AI detector')
+          setIsLoading(false)
+          return
+        }
+        
+        const success = await detector.initialize()
         if (!success) {
           setError('Không thể khởi tạo AI')
           setIsLoading(false)
