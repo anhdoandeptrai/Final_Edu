@@ -1,6 +1,5 @@
 // AI Behavior Detector using TensorFlow.js MoveNet
-// This file should only be imported on client-side
-import type * as poseDetection from '@tensorflow-models/pose-detection'
+// This file should only be imported on client-side dynamically
 
 export interface BehaviorResult {
   label: string
@@ -15,9 +14,9 @@ interface Point {
   y: number
 }
 
-// Lazy load TensorFlow only when needed
-let tf: typeof import('@tensorflow/tfjs')
-let poseDetectionModule: typeof import('@tensorflow-models/pose-detection')
+// Lazy load TensorFlow only when needed - avoid importing at build time
+let tf: any
+let poseDetectionModule: any
 
 async function loadTensorFlow() {
   if (!tf) {
@@ -34,7 +33,7 @@ async function loadPoseDetection() {
 }
 
 class AIDetector {
-  private detector: poseDetection.PoseDetector | null = null
+  private detector: any = null
   private historyBuffer: Point[] = []
   private readonly BUFFER_SIZE = 15
   private isInitialized = false
