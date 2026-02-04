@@ -6,11 +6,9 @@ import { addBehaviorEntry } from './BehaviorHistoryPanel'
 
 interface Props {
   enabled?: boolean
-  userId?: string
-  userName?: string
 }
 
-export default function AIBehaviorDetector({ enabled = true, userId, userName }: Props) {
+export default function AIBehaviorDetector({ enabled = true }: Props) {
   const [behavior, setBehavior] = useState<BehaviorResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAIOn, setIsAIOn] = useState(enabled)

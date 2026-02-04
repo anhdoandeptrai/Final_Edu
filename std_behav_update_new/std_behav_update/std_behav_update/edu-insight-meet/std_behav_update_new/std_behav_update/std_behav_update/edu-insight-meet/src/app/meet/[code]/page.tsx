@@ -2,11 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useAuth } from '../../../contexts/AuthContext'
-import { useMeeting } from '../../../contexts/MeetingContext'
-
-// Disable static generation
-export const dynamic = 'force-dynamic'
 
 interface DeviceStatus {
   camera: 'checking' | 'ok' | 'error'
@@ -23,8 +18,6 @@ export default function PreJoinPage() {
   const router = useRouter()
   const params = useParams()
   const code = params.code as string
-  const { user } = useAuth()
-  const { joinMeeting, getMeeting } = useMeeting()
 
   const [userName, setUserName] = useState('')
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>({
@@ -39,15 +32,6 @@ export default function PreJoinPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-
-  // Redirect to auth if not authenticated
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth')
-    } else {
-      setUserName(user.name)
-    }
-  }, [user, router])
 
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
     const time = new Date().toLocaleTimeString()
@@ -135,7 +119,7 @@ export default function PreJoinPage() {
   }
 
   const joinRoom = async () => {
-    if (!userName.trim() || !user) {
+    if (!userName.trim()) {
       addLog('Vui lòng nhập tên', 'error')
       return
     }
@@ -143,28 +127,17 @@ export default function PreJoinPage() {
     setIsJoining(true)
     addLog('Đang tham gia phòng...', 'info')
 
-    // Join meeting in context
-    const joined = joinMeeting(code, user.id, user.name, user.role)
-    
-    if (!joined) {
-      addLog('Không thể tham gia phòng - phòng không tồn tại', 'error')
-      setIsJoining(false)
-      return
-    }
-
     // Don't stop the stream here - just release the reference
     // The browser will clean up when we navigate away
     if (videoRef.current) {
       videoRef.current.srcObject = null
     }
     
-    // Store settings with role and userId
+    // Store settings
     sessionStorage.setItem('meetSettings', JSON.stringify({
-      userName: user.name,
+      userName: userName.trim(),
       cameraEnabled,
-      micEnabled,
-      userRole: user.role,
-      userId: user.id
+      micEnabled
     }))
 
     addLog('Chuyển đến phòng họp...', 'success')
@@ -196,19 +169,6 @@ export default function PreJoinPage() {
               {code}
             </span>
           </div>
-          {user && (
-            <div style={{ 
-              marginTop: '0.75rem',
-              padding: '0.5rem 1rem',
-              background: user.role === 'teacher' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '0.5rem',
-              display: 'inline-block'
-            }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
-                {user.role === 'teacher' ? '👨‍🏫 Giáo viên' : '👨‍🎓 Học sinh'}: {user.name}
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="card">
@@ -268,14 +228,15 @@ export default function PreJoinPage() {
             </button>
           </div>
 
-          {/* User Name Input - Read-only since it's from auth */}
+          {/* User Name Input */}
           <input
             type="text"
             className="input"
             placeholder="Nhập tên của bạn..."
             value={userName}
-            readOnly
-            style={{ marginTop: '1rem', background: 'var(--bg-secondary)', cursor: 'not-allowed' }}
+            onChange={(e) => setUserName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && joinRoom()}
+            style={{ marginTop: '1rem' }}
           />
 
           <button

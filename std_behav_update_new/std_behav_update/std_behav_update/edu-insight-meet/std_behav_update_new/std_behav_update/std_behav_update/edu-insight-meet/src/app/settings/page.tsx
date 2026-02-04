@@ -3,9 +3,6 @@
 import { useState } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 
-// Disable static generation
-export const dynamic = 'force-dynamic'
-
 export default function SettingsPage() {
     const [aiEnabled, setAiEnabled] = useState(true)
     const [autoRecord, setAutoRecord] = useState(false)

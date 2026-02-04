@@ -13,26 +13,17 @@ import {
   useRoomContext,
 } from '@livekit/components-react'
 import { Track } from 'livekit-client'
-import dynamicImport from 'next/dynamic'
-
-// Disable static generation
-export const dynamic = 'force-dynamic'
+import dynamic from 'next/dynamic'
 
 // Dynamic import AI component to avoid SSR issues
-const AIBehaviorDetector = dynamicImport(
+const AIBehaviorDetector = dynamic(
   () => import('../../../../components/AIBehaviorDetector'),
   { ssr: false }
 )
 
 // Dynamic import for BehaviorHistoryPanel
-const BehaviorHistoryPanel = dynamicImport(
+const BehaviorHistoryPanel = dynamic(
   () => import('../../../../components/BehaviorHistoryPanel'),
-  { ssr: false }
-)
-
-// Dynamic import for StudentsBehaviorPanel
-const StudentsBehaviorPanel = dynamicImport(
-  () => import('../../../../components/StudentsBehaviorPanel'),
   { ssr: false }
 )
 
@@ -40,8 +31,6 @@ interface MeetSettings {
   userName: string
   cameraEnabled: boolean
   micEnabled: boolean
-  userRole?: 'teacher' | 'student'
-  userId?: string
 }
 
 // Custom Video Grid Component
@@ -595,7 +584,7 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
           <VideoGrid />
         </div>
 
-        {/* Analytics & History Sidebar - Different for teacher vs student */}
+        {/* Analytics & History Sidebar */}
         {showHistory && (
           <div style={{
             width: '320px',
@@ -604,28 +593,13 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
             borderLeft: '1px solid var(--border-color)',
             background: 'var(--bg-secondary)'
           }}>
-            {settings.userRole === 'student' ? (
-              <BehaviorHistoryPanel maxEntries={15} />
-            ) : (
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
-                Xem phân tích học sinh ở panel bên phải
-              </div>
-            )}
+            <BehaviorHistoryPanel maxEntries={15} />
           </div>
         )}
       </div>
 
-      {/* AI Behavior Detector - Only for students */}
-      {settings.userRole === 'student' && (
-        <AIBehaviorDetector 
-          enabled={true} 
-          userId={settings.userId}
-          userName={settings.userName}
-        />
-      )}
-      
-      {/* Students Behavior Panel - Only for teachers */}
-      {settings.userRole === 'teacher' && <StudentsBehaviorPanel />}
+      {/* AI Behavior Detector */}
+      <AIBehaviorDetector enabled={true} />
 
       {/* Control Bar */}
       <ControlBar roomCode={code} onDisconnect={handleDisconnect} />

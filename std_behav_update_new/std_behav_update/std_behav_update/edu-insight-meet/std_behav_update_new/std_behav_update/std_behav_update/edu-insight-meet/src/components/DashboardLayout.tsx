@@ -1,6 +1,5 @@
 'use client'
 
-import { React } from 'next/dist/server/route-modules/app-page/vendored/rsc/entrypoints'
 import Sidebar from './Sidebar'
 
 interface Props {

@@ -1,0 +1,17 @@
+# Ignore nested duplicate directories
+std_behav_update_new/
+
+# Node modules
+node_modules/
+
+# Build outputs
+.next/
+out/
+
+# Documentation
+*.md
+!README.md
+
+# Development files
+.vscode/
+.idea/

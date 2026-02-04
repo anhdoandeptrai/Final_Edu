@@ -5,9 +5,6 @@ import { useRouter } from 'next/navigation'
 import { nanoid } from 'nanoid'
 import DashboardLayout from '../../components/DashboardLayout'
 
-// Disable static generation
-export const dynamic = 'force-dynamic'
-
 export default function MeetingPage() {
     const router = useRouter()
     const [meetingCode, setMeetingCode] = useState('')

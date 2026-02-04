@@ -2,8 +2,7 @@
 
 import DashboardLayout from '../../components/DashboardLayout'
 import BehaviorHistoryPanel from '../../components/BehaviorHistoryPanel'
-// Disable static generation
-export const dynamic = 'force-dynamic'
+
 export default function HistoryPage() {
     return (
         <DashboardLayout>
