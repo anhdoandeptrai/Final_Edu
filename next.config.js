@@ -2,16 +2,17 @@
 const nextConfig = {
   reactStrictMode: true,
   webpack: (config, { isServer }) => {
-    // Ignore @mediapipe modules on server-side
-    if (isServer) {
-      config.externals = config.externals || [];
-      config.externals.push({
-        '@mediapipe/pose': 'commonjs @mediapipe/pose',
-        '@tensorflow-models/pose-detection': 'commonjs @tensorflow-models/pose-detection',
-        '@tensorflow/tfjs-core': 'commonjs @tensorflow/tfjs-core',
-        '@tensorflow/tfjs-backend-webgl': 'commonjs @tensorflow/tfjs-backend-webgl',
-      });
-    }
+    // Completely externalize TensorFlow and MediaPipe to avoid build errors
+    config.externals = config.externals || [];
+    config.externals.push({
+      '@mediapipe/pose': 'commonjs @mediapipe/pose',
+      '@tensorflow-models/pose-detection': 'commonjs @tensorflow-models/pose-detection',
+      '@tensorflow/tfjs-core': 'commonjs @tensorflow/tfjs-core',
+      '@tensorflow/tfjs': 'commonjs @tensorflow/tfjs',
+      '@tensorflow/tfjs-backend-webgl': 'commonjs @tensorflow/tfjs-backend-webgl',
+      '@tensorflow/tfjs-backend-webgpu': 'commonjs @tensorflow/tfjs-backend-webgpu',
+      '@tensorflow/tfjs-converter': 'commonjs @tensorflow/tfjs-converter',
+    });
 
     // Add fallbacks for node modules
     config.resolve.fallback = {
