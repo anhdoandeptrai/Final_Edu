@@ -16,10 +16,11 @@ import { Track } from 'livekit-client'
 import dynamic from 'next/dynamic'
 
 // Dynamic import AI component to avoid SSR issues
-const AIBehaviorDetector = dynamic(
+// Temporarily disabled for deployment
+/* const AIBehaviorDetector = dynamic(
   () => import('../../../../components/AIBehaviorDetector'),
   { ssr: false }
-)
+) */
 
 // Dynamic import for BehaviorHistoryPanel
 const BehaviorHistoryPanel = dynamic(
@@ -613,13 +614,14 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
       </div>
 
       {/* AI Behavior Detector - Only for students */}
-      {settings.userRole === 'student' && (
+      {/* Temporarily disabled for deployment */}
+      {/* {settings.userRole === 'student' && (
         <AIBehaviorDetector 
           enabled={true} 
           userId={settings.userId}
           userName={settings.userName}
         />
-      )}
+      )} */}
       
       {/* Students Behavior Panel - Only for teachers */}
       {settings.userRole === 'teacher' && <StudentsBehaviorPanel />}
