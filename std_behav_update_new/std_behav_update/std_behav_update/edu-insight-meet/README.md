@@ -1,6 +1,6 @@
-# Edu Insight Meet - Final_Edu
+# Edu Insight Meet - MVP
 
-Video call 1-1 real-time với WebRTC + LiveKit Cloud và phát hiện hành vi học sinh bằng AI.
+Video call 1-1 real-time với WebRTC + LiveKit Cloud.
 
 ## Quick Start
 
