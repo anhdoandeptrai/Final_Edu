@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
+import { useMeeting } from '../contexts/MeetingContext'
 
 export interface StudentBehavior {
   userId: string
@@ -33,6 +35,9 @@ export function getStudentBehaviors() {
 export default function StudentsBehaviorPanel() {
   const [behaviors, setBehaviors] = useState<StudentBehavior[]>([])
   const [isExpanded, setIsExpanded] = useState(true)
+  const params = useParams()
+  const code = params?.code as string
+  const { getStudents } = useMeeting()
 
   useEffect(() => {
     const unsubscribe = subscribeToStudentBehaviors(() => {
@@ -41,22 +46,36 @@ export default function StudentsBehaviorPanel() {
     return unsubscribe
   }, [])
 
-  // Get unique students
-  const students = new Map<string, StudentBehavior>()
+  // Get students from meeting context
+  const meetingStudents = code ? getStudents(code) : []
+
+  // Get unique students from behaviors
+  const studentsFromBehaviors = new Map<string, StudentBehavior>()
   behaviors.forEach(behavior => {
-    if (!students.has(behavior.userId)) {
-      students.set(behavior.userId, behavior)
+    if (!studentsFromBehaviors.has(behavior.userId)) {
+      studentsFromBehaviors.set(behavior.userId, behavior)
     }
   })
 
-  const uniqueStudents = Array.from(students.values())
+  // Combine both sources - prioritize meeting students
+  const allStudents = meetingStudents.map(student => {
+    const behavior = studentsFromBehaviors.get(student.userId)
+    return behavior || {
+      userId: student.userId,
+      userName: student.userName,
+      label: 'Đang tham gia',
+      emoji: '👤',
+      color: '#6b7280',
+      timestamp: student.joinedAt
+    }
+  })
 
   // Calculate statistics
   const stats = {
     focused: behaviors.filter(b => b.label === 'Tập trung').length,
     distracted: behaviors.filter(b => b.label === 'Mất tập trung').length,
     sleeping: behaviors.filter(b => b.label === 'Buồn ngủ').length,
-    total: uniqueStudents.length
+    total: allStudents.length
   }
 
   return (
@@ -154,7 +173,7 @@ export default function StudentsBehaviorPanel() {
             overflowY: 'auto',
             padding: '0.5rem'
           }}>
-            {uniqueStudents.length === 0 ? (
+            {allStudents.length === 0 ? (
               <div style={{
                 padding: '2rem 1rem',
                 textAlign: 'center',
@@ -165,7 +184,7 @@ export default function StudentsBehaviorPanel() {
                 <p style={{ fontSize: '2rem', margin: '0.5rem 0' }}>👥</p>
               </div>
             ) : (
-              uniqueStudents.map((student) => (
+              allStudents.map((student) => (
                 <div
                   key={student.userId}
                   style={{
