@@ -14,7 +14,7 @@ interface BehaviorResult {
   label: string
   emoji: string
   color: string
-  type: 'focused' | 'distracted' | 'sleeping'
+  type: 'positive' | 'negative' | 'neutral' | 'warning'
 }
 
 export default function AIBehaviorDetector({ enabled = true, userId, userName }: Props) {
@@ -26,10 +26,10 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
 
   // Simple behavior simulation (cycling through behaviors for demo)
   const behaviors: BehaviorResult[] = [
-    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'focused' },
-    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'focused' },
-    { label: 'Mất tập trung', emoji: '⚠️', color: '#f59e0b', type: 'distracted' },
-    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'focused' },
+    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'positive' },
+    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'positive' },
+    { label: 'Mất tập trung', emoji: '⚠️', color: '#f59e0b', type: 'warning' },
+    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'positive' },
   ]
 
   const findLocalVideo = useCallback((): HTMLVideoElement | null => {
