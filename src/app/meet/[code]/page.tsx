@@ -140,14 +140,9 @@ export default function PreJoinPage() {
     setIsJoining(true)
     addLog('Đang tham gia phòng...', 'info')
 
-    // Join meeting in context
-    const joined = joinMeeting(code, user.id, user.name, user.role)
-    
-    if (!joined) {
-      addLog('Không thể tham gia phòng - phòng không tồn tại', 'error')
-      setIsJoining(false)
-      return
-    }
+    // Join meeting in context - will auto-create if doesn't exist
+    joinMeeting(code, user.id, user.name, user.role)
+    addLog('✓ Đã tham gia phòng', 'success')
 
     // Don't stop the stream here - just release the reference
     // The browser will clean up when we navigate away

@@ -59,8 +59,14 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       const meetingsData = JSON.parse(localStorage.getItem('meetings') || '{}')
       meeting = meetingsData[code]
       
+      // If meeting doesn't exist, create it automatically
       if (!meeting) {
-        return false
+        meeting = {
+          code,
+          creatorId: userId,
+          participants: [],
+          createdAt: Date.now()
+        }
       }
     }
 
