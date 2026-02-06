@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { addBehaviorEntry } from './BehaviorHistoryPanel'
 import { addStudentBehavior } from './StudentsBehaviorPanel'
+import { detectBehavior, initDetector, cleanupDetector } from '../lib/ai-detector'
 
 interface Props {
   enabled?: boolean
@@ -15,22 +16,16 @@ interface BehaviorResult {
   emoji: string
   color: string
   type: 'positive' | 'negative' | 'neutral' | 'warning'
+  confidence?: number
 }
 
 export default function AIBehaviorDetector({ enabled = true, userId, userName }: Props) {
   const [behavior, setBehavior] = useState<BehaviorResult | null>(null)
   const [isAIOn, setIsAIOn] = useState(enabled)
+  const [isLoading, setIsLoading] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const behaviorIndexRef = useRef(0)
-
-  // Simple behavior simulation (cycling through behaviors for demo)
-  const behaviors: BehaviorResult[] = [
-    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'positive' },
-    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'positive' },
-    { label: 'Mất tập trung', emoji: '⚠️', color: '#f59e0b', type: 'warning' },
-    { label: 'Tập trung', emoji: '✅', color: '#10b981', type: 'positive' },
-  ]
+  const detectorInitialized = useRef(false)
 
   const findLocalVideo = useCallback((): HTMLVideoElement | null => {
     const videos = Array.from(document.querySelectorAll('video'))
@@ -43,7 +38,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
     return null
   }, [])
 
-  const runDetection = useCallback(() => {
+  const runDetection = useCallback(async () => {
     if (!isAIOn) return
 
     const video = videoRef.current || findLocalVideo()
@@ -51,15 +46,22 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
 
     videoRef.current = video
     
-    // TODO: Implement real AI detection using MediaPipe or TensorFlow
-    // For now, AI detection is disabled to avoid fake results
-    // The simulation was cycling through behaviors without actual video analysis
-    
-    // Uncomment below when real AI detection is implemented:
-    /*
-    // Get next behavior in cycle (SIMULATION ONLY)
-    const result = behaviors[behaviorIndexRef.current % behaviors.length]
-    behaviorIndexRef.current++
+    // Initialize detector on first run
+    if (!detectorInitialized.current) {
+      setIsLoading(true)
+      const initialized = await initDetector()
+      if (!initialized) {
+        console.error('Failed to initialize AI detector')
+        setIsLoading(false)
+        return
+      }
+      detectorInitialized.current = true
+      setIsLoading(false)
+    }
+
+    // Run real AI detection
+    const result = await detectBehavior(video)
+    if (!result) return
     
     setBehavior(result)
     
@@ -81,7 +83,6 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
         timestamp: Date.now()
       })
     }
-    */
   }, [isAIOn, findLocalVideo, userId, userName])
 
   useEffect(() => {
@@ -111,6 +112,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
+      cleanupDetector()
     }
   }, [isAIOn, findLocalVideo, runDetection])
 
@@ -118,6 +120,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
     setIsAIOn(!isAIOn)
     if (isAIOn) {
       setBehavior(null)
+      detectorInitialized.current = false
     }
   }
 
@@ -132,7 +135,28 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
       gap: 8
     }}>
       {/* AI Status Badge */}
-      {isAIOn && behavior && (
+      {isLoading && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.625rem 1rem',
+            borderRadius: '12px',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            background: 'var(--bg-primary)',
+            color: '#6b7280',
+            border: '2px solid rgba(107, 114, 128, 0.3)',
+            boxShadow: 'var(--shadow-md)'
+          }}
+        >
+          <span style={{ fontSize: '1.25rem' }}>⏳</span>
+          <span>Đang tải AI...</span>
+        </div>
+      )}
+      
+      {isAIOn && behavior && !isLoading && (
         <div
           style={{
             display: 'flex',
