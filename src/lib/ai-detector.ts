@@ -11,14 +11,24 @@ export interface BehaviorDetectionResult {
 
 let detector: poseDetection.PoseDetector | null = null
 let isInitializing = false
+let initializationFailed = false
 
 export async function initDetector(): Promise<boolean> {
   if (detector) return true
   if (isInitializing) return false
+  if (initializationFailed) return false // Don't retry if already failed
   
   isInitializing = true
   
   try {
+    // Check if running in browser and WebGL is available
+    if (typeof window === 'undefined') {
+      console.warn('AI detector can only run in browser')
+      isInitializing = false
+      initializationFailed = true
+      return false
+    }
+
     // Use MoveNet model - lightweight and fast for browser
     const model = poseDetection.SupportedModels.MoveNet
     detector = await poseDetection.createDetector(model, {
@@ -28,7 +38,9 @@ export async function initDetector(): Promise<boolean> {
     return true
   } catch (error) {
     console.error('Failed to initialize pose detector:', error)
+    console.warn('AI detection will be disabled. This is normal on some devices.')
     isInitializing = false
+    initializationFailed = true
     return false
   }
 }
