@@ -1,0 +1,5 @@
+std_behav_update_new
+.git-rewrite
+node_modules
+.next
+*.log
