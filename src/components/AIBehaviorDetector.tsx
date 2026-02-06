@@ -51,7 +51,13 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
 
     videoRef.current = video
     
-    // Get next behavior in cycle
+    // TODO: Implement real AI detection using MediaPipe or TensorFlow
+    // For now, AI detection is disabled to avoid fake results
+    // The simulation was cycling through behaviors without actual video analysis
+    
+    // Uncomment below when real AI detection is implemented:
+    /*
+    // Get next behavior in cycle (SIMULATION ONLY)
     const result = behaviors[behaviorIndexRef.current % behaviors.length]
     behaviorIndexRef.current++
     
@@ -75,6 +81,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
         timestamp: Date.now()
       })
     }
+    */
   }, [isAIOn, findLocalVideo, userId, userName])
 
   useEffect(() => {

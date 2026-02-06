@@ -70,11 +70,16 @@ export default function StudentsBehaviorPanel() {
     }
   })
 
-  // Calculate statistics
+  // Calculate statistics based on latest behavior for each student
+  const getLatestBehaviorForStudent = (userId: string) => {
+    const studentBehaviors = behaviors.filter(b => b.userId === userId)
+    return studentBehaviors[studentBehaviors.length - 1]?.label
+  }
+
   const stats = {
-    focused: behaviors.filter(b => b.label === 'Tập trung').length,
-    distracted: behaviors.filter(b => b.label === 'Mất tập trung').length,
-    sleeping: behaviors.filter(b => b.label === 'Buồn ngủ').length,
+    focused: allStudents.filter(s => getLatestBehaviorForStudent(s.userId) === 'Tập trung').length,
+    distracted: allStudents.filter(s => getLatestBehaviorForStudent(s.userId) === 'Mất tập trung').length,
+    sleeping: allStudents.filter(s => getLatestBehaviorForStudent(s.userId) === 'Buồn ngủ').length,
     total: allStudents.length
   }
 
