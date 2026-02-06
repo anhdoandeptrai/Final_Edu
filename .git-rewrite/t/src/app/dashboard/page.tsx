@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { nanoid } from 'nanoid'
 import DashboardLayout from '../../components/DashboardLayout'
@@ -14,13 +14,8 @@ export default function DashboardPage() {
   const [meetingCode, setMeetingCode] = useState('')
   const [isCreating, setIsCreating] = useState(false)
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth')
-    }
-  }, [user, router])
-
   if (!user) {
+    router.push('/auth')
     return null
   }
 

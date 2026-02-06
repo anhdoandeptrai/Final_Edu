@@ -6,9 +6,6 @@ import { MeetingProvider } from '../contexts/MeetingContext'
 export const metadata: Metadata = {
   title: 'Edu Insight Meet',
   description: 'Real-time video meeting for education',
-  icons: {
-    icon: '/favicon.ico',
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
