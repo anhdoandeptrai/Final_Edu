@@ -52,6 +52,24 @@ function VideoGrid() {
   // Check if local participant has video track
   const localHasVideo = videoTracks.some(t => t.participant.sid === localParticipant?.sid)
 
+  // Get participants without video
+  const participantsWithVideo = new Set(videoTracks.map(t => t.participant.sid))
+  const participantsWithoutVideo = participants.filter(p => !participantsWithVideo.has(p.sid))
+
+  const getInitials = (name: string) => {
+    return (name || 'U').charAt(0).toUpperCase()
+  }
+
+  const getAvatarColor = (name: string) => {
+    // Generate consistent color based on name
+    const colors = [
+      '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', 
+      '#10b981', '#06b6d4', '#6366f1', '#8b5cf6'
+    ]
+    const index = name ? name.charCodeAt(0) % colors.length : 0
+    return colors[index]
+  }
+
   return (
     <div style={{
       display: 'grid',
@@ -83,15 +101,17 @@ function VideoGrid() {
             width: '100px',
             height: '100px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            background: `linear-gradient(135deg, ${getAvatarColor(localParticipant.name || localParticipant.identity)} 0%, ${getAvatarColor(localParticipant.name || localParticipant.identity)}dd 100%)`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '2.5rem',
+            fontWeight: 600,
             color: '#fff',
-            marginBottom: '1rem'
+            marginBottom: '1rem',
+            boxShadow: 'var(--shadow-lg)'
           }}>
-            {(localParticipant.name || localParticipant.identity || 'U').charAt(0).toUpperCase()}
+            {getInitials(localParticipant.name || localParticipant.identity)}
           </div>
           <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
             {localParticipant.name || localParticipant.identity}
@@ -199,6 +219,68 @@ function VideoGrid() {
             boxShadow: 'var(--shadow-sm)'
           }}>
             ● HD
+          </div>
+        </div>
+      ))}
+
+      {/* Remote participants without video - show avatars */}
+      {participantsWithoutVideo.map((participant) => (
+        <div
+          key={participant.sid}
+          style={{
+            position: 'relative',
+            background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '300px'
+          }}
+        >
+          <div style={{
+            width: '100px',
+            height: '100px',
+            borderRadius: '50%',
+            background: `linear-gradient(135deg, ${getAvatarColor(participant.name || participant.identity)} 0%, ${getAvatarColor(participant.name || participant.identity)}dd 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '2.5rem',
+            fontWeight: 600,
+            color: '#fff',
+            marginBottom: '1rem',
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            {getInitials(participant.name || participant.identity)}
+          </div>
+          <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
+            {participant.name || participant.identity}
+          </p>
+          <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            📷 Camera đang tắt
+          </p>
+          
+          {/* Name Badge */}
+          <div style={{
+            position: 'absolute',
+            bottom: '1rem',
+            left: '1rem',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            padding: '0.5rem 1rem',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            boxShadow: 'var(--shadow-md)'
+          }}>
+            <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+              {participant.name || participant.identity}
+            </span>
           </div>
         </div>
       ))}
