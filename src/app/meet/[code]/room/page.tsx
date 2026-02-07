@@ -89,6 +89,7 @@ function VideoGrid() {
   const { localParticipant } = useLocalParticipant()
 
   const videoTracks = tracks.filter(t => t.source === Track.Source.Camera)
+  const screenTracks = tracks.filter(t => t.source === Track.Source.ScreenShare)
   
   // Check if local participant has video track
   const localHasVideo = videoTracks.some(t => t.participant.sid === localParticipant?.sid)
@@ -113,16 +114,74 @@ function VideoGrid() {
     return colors[index]
   }
 
+  // If there's screen share, give it priority display
+  const hasScreenShare = screenTracks.length > 0
+
   return (
     <div style={{
-      display: 'grid',
-      gridTemplateColumns: participants.length > 1 ? '1fr 1fr' : '1fr',
+      display: 'flex',
+      flexDirection: hasScreenShare ? 'column' : 'row',
       gap: '1rem',
       padding: '1rem',
       height: 'calc(100vh - 150px)',
-      maxWidth: '1200px',
+      maxWidth: hasScreenShare ? '100%' : '1200px',
       margin: '0 auto'
     }}>
+      {/* Screen Share - Full width at top if present */}
+      {screenTracks.map((track) => (
+        <div
+          key={track.participant.sid + '-screen'}
+          style={{
+            position: 'relative',
+            background: '#000',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            border: '2px solid var(--accent-primary)',
+            boxShadow: 'var(--shadow-lg)',
+            height: hasScreenShare ? '60vh' : 'auto',
+            flex: hasScreenShare ? '0 0 auto' : 1
+          }}
+        >
+          <VideoTrack
+            trackRef={track}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain'
+            }}
+          />
+
+          {/* Screen Share Label */}
+          <div style={{
+            position: 'absolute',
+            top: '1rem',
+            left: '1rem',
+            background: 'rgba(59, 130, 246, 0.95)',
+            backdropFilter: 'blur(10px)',
+            padding: '0.5rem 1rem',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            boxShadow: 'var(--shadow-md)'
+          }}>
+            <span style={{ fontSize: '1rem' }}>🖥️</span>
+            <span style={{ fontSize: '0.875rem', color: '#fff', fontWeight: 500 }}>
+              {track.participant.name || track.participant.identity} đang chia sẻ màn hình
+            </span>
+          </div>
+        </div>
+      ))}
+
+      {/* Video Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: participants.length > 1 ? '1fr 1fr' : '1fr',
+        gap: '1rem',
+        flex: 1,
+        height: hasScreenShare ? '35vh' : 'auto',
+        overflowY: hasScreenShare ? 'auto' : 'visible'
+      }}>
       {/* Show local participant placeholder if no video */}
       {localParticipant && !localHasVideo && (
         <div
@@ -346,6 +405,7 @@ function VideoGrid() {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Chia sẻ mã phòng để mời</p>
         </div>
       )}
+      </div>
     </div>
   )
 }
@@ -507,6 +567,17 @@ function ControlBar({ roomCode, onDisconnect }: { roomCode: string; onDisconnect
       </button>
     </div>
   )
+}
+
+// Wrapper to get participants and pass to StudentsBehaviorPanel
+function StudentsBehaviorPanelWrapper() {
+  const participants = useParticipants()
+  const { localParticipant } = useLocalParticipant()
+  
+  // Filter out local participant (teacher)
+  const remoteParticipants = participants.filter(p => p.sid !== localParticipant?.sid)
+  
+  return <StudentsBehaviorPanel participants={remoteParticipants} />
 }
 
 // Room Content Component
@@ -741,7 +812,7 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
       <AIDetectionManager settings={settings} />
       
       {/* Students Behavior Panel - Only for teachers */}
-      {settings.userRole === 'teacher' && <StudentsBehaviorPanel />}
+      {settings.userRole === 'teacher' && <StudentsBehaviorPanelWrapper />}
 
       {/* Control Bar */}
       <ControlBar roomCode={code} onDisconnect={handleDisconnect} />

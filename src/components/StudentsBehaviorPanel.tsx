@@ -11,6 +11,12 @@ export interface StudentBehavior {
   timestamp: number
 }
 
+export interface Participant {
+  sid: string
+  identity: string
+  name?: string
+}
+
 let studentBehaviors: StudentBehavior[] = []
 let listeners: Array<() => void> = []
 
@@ -30,7 +36,11 @@ export function getStudentBehaviors() {
   return studentBehaviors
 }
 
-export default function StudentsBehaviorPanel() {
+interface Props {
+  participants?: Participant[]
+}
+
+export default function StudentsBehaviorPanel({ participants = [] }: Props) {
   const [behaviors, setBehaviors] = useState<StudentBehavior[]>([])
   const [isExpanded, setIsExpanded] = useState(true)
   const [selectedStudent, setSelectedStudent] = useState<StudentBehavior | null>(null)
@@ -55,8 +65,25 @@ export default function StudentsBehaviorPanel() {
     }
   })
 
+  // Merge participants from LiveKit with behaviors
+  // Show all participants, even those without behaviors yet
+  participants.forEach(participant => {
+    if (!studentsMap.has(participant.sid)) {
+      // Add participant without behavior data
+      studentsMap.set(participant.sid, {
+        userId: participant.sid,
+        userName: participant.name || participant.identity,
+        label: 'Chưa phát hiện',
+        emoji: '👤',
+        color: '#9ca3af',
+        timestamp: Date.now()
+      })
+    }
+  })
+
   const allStudents = Array.from(studentsMap.values())
-  console.log('[StudentsBehaviorPanel] Số học sinh:', allStudents.length)
+  console.log('[StudentsBehaviorPanel] Tổng số học sinh (bao gồm chưa mở cam):', allStudents.length)
+  console.log('[StudentsBehaviorPanel] Số participants từ LiveKit:', participants.length)
   console.log('[StudentsBehaviorPanel] Behaviors:', behaviors.length)
 
   // Calculate statistics based on latest behavior for each student
