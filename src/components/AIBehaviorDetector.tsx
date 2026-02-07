@@ -28,25 +28,57 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
     for (let i = 0; i < videos.length; i++) {
       const video = videos[i]
       
-      // If looking for specific participant, match by checking video container or data attributes
+      // Check if video is ready
+      if (!video.srcObject || video.readyState < 2 || video.videoWidth === 0) {
+        continue
+      }
+      
+      // If looking for specific participant
       if (participantSid) {
-        // Check if this video belongs to the participant
-        // LiveKit videos are wrapped in containers with participant info
+        // Try multiple ways to identify the participant video
+        
+        // Method 1: Check data attributes on video or parent
         const container = video.closest('[data-lk-participant-sid]') || 
-                         video.closest('[data-lk-participant]')
+                         video.closest('[data-lk-participant]') ||
+                         video.closest('[data-lk-participant-identity]')
         
         if (container) {
           const sid = container.getAttribute('data-lk-participant-sid') || 
-                     container.getAttribute('data-lk-participant')
-          if (sid === participantSid && video.srcObject && video.readyState >= 2 && video.videoWidth > 0) {
-            console.log('[AI] ✅ Tìm thấy video của participant:', participantSid)
+                     container.getAttribute('data-lk-participant') ||
+                     container.getAttribute('data-lk-participant-identity')
+          
+          if (sid === participantSid) {
+            console.log('[AI] ✅ Tìm thấy video của participant qua data attribute:', participantSid)
             return video
           }
         }
+        
+        // Method 2: Check if video element itself has data attributes
+        const videoSid = video.getAttribute('data-lk-participant-sid') ||
+                        video.getAttribute('data-participant-sid') ||
+                        video.getAttribute('data-participant-identity')
+        
+        if (videoSid === participantSid) {
+          console.log('[AI] ✅ Tìm thấy video của participant qua video attribute:', participantSid)
+          return video
+        }
+        
+        // Method 3: For remote participants, exclude muted videos (local video is usually muted)
+        // Remote participants typically have unmuted video elements
+        if (!video.muted && i > 0) {
+          console.log('[AI] ✅ Tìm thấy video remote participant (unmuted):', i)
+          return video
+        }
       } else {
-        // Find local video (usually muted)
-        if (video.srcObject && video.readyState >= 2 && video.videoWidth > 0) {
-          console.log('[AI] ✅ Tìm thấy video phù hợp:', i)
+        // Find local video (usually the first muted video with srcObject)
+        if (video.muted) {
+          console.log('[AI] ✅ Tìm thấy local video (muted):', i)
+          return video
+        }
+        
+        // Fallback: first available video
+        if (i === 0) {
+          console.log('[AI] ✅ Tìm thấy video phù hợp (fallback):', i)
           return video
         }
       }
@@ -136,6 +168,13 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
           
           if (video) {
             console.log('[AI] ✅ Đã tìm thấy video, bắt đầu detection loop')
+            console.log('[AI] Video info:', {
+              width: video.videoWidth,
+              height: video.videoHeight,
+              readyState: video.readyState,
+              muted: video.muted,
+              participantSid
+            })
             videoRef.current = video
             
             // Run immediately first time
@@ -150,9 +189,18 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
             retryCount++
             if (retryCount < maxRetries) {
               console.log('[AI] Chưa tìm thấy video, thử lại sau 1s...')
+              console.log('[AI] Tổng số video elements:', document.querySelectorAll('video').length)
               setTimeout(waitForVideo, 1000)
             } else {
               console.error('[AI] ❌ Không thể tìm thấy video sau', maxRetries, 'lần thử')
+              console.log('[AI] Debug - tất cả video elements:', Array.from(document.querySelectorAll('video')).map((v, i) => ({
+                index: i,
+                muted: v.muted,
+                width: v.videoWidth,
+                height: v.videoHeight,
+                readyState: v.readyState,
+                hasSrcObject: !!v.srcObject
+              })))
             }
           }
         }

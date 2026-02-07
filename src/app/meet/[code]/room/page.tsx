@@ -256,6 +256,8 @@ function VideoGrid() {
       {videoTracks.map((track) => (
         <div
           key={track.participant.sid}
+          data-lk-participant-sid={track.participant.sid}
+          data-lk-participant-identity={track.participant.identity}
           style={{
             position: 'relative',
             background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
