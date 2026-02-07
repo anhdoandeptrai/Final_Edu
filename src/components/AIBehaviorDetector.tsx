@@ -29,40 +29,65 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
 
   const findLocalVideo = useCallback((): HTMLVideoElement | null => {
     const videos = Array.from(document.querySelectorAll('video'))
+    console.log('[AI] Tìm thấy', videos.length, 'video elements')
+    
     for (let i = 0; i < videos.length; i++) {
       const video = videos[i]
-      if (video.muted && video.srcObject && video.readyState >= 2) {
+      console.log(`[AI] Video ${i}:`, {
+        muted: video.muted,
+        hasSrcObject: !!video.srcObject,
+        readyState: video.readyState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight
+      })
+      
+      // Try to find local video (usually muted) with video stream
+      if (video.srcObject && video.readyState >= 2 && video.videoWidth > 0) {
+        console.log('[AI] ✅ Tìm thấy video phù hợp:', i)
         return video
       }
     }
+    console.log('[AI] ❌ Không tìm thấy video phù hợp')
     return null
   }, [])
 
   const runDetection = useCallback(async () => {
+    console.log('[AI] Bắt đầu phát hiện, isAIOn:', isAIOn)
     if (!isAIOn) return
 
     const video = videoRef.current || findLocalVideo()
-    if (!video) return
+    if (!video) {
+      console.log('[AI] ❌ Không tìm thấy video element')
+      return
+    }
 
     videoRef.current = video
+    console.log('[AI] ✅ Đang sử dụng video element')
     
     // Initialize detector on first run
     if (!detectorInitialized.current) {
+      console.log('[AI] Đang khởi tạo AI detector...')
       setIsLoading(true)
       const initialized = await initDetector()
       if (!initialized) {
-        console.error('Failed to initialize AI detector')
+        console.error('[AI] ❌ Không thể khởi tạo AI detector')
         setIsLoading(false)
         return
       }
+      console.log('[AI] ✅ AI detector đã sẵn sàng')
       detectorInitialized.current = true
       setIsLoading(false)
     }
 
     // Run real AI detection
+    console.log('[AI] Đang phân tích hành vi...')
     const result = await detectBehavior(video)
-    if (!result) return
+    if (!result) {
+      console.log('[AI] ⚠️ Không có kết quả phát hiện')
+      return
+    }
     
+    console.log('[AI] ✅ Phát hiện:', result.label, result.emoji)
     setBehavior(result)
     
     // Add to history panel (student's own view)
@@ -86,7 +111,10 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
   }, [isAIOn, findLocalVideo, userId, userName])
 
   useEffect(() => {
+    console.log('[AI] useEffect triggered, isAIOn:', isAIOn)
+    
     if (!isAIOn) {
+      console.log('[AI] AI tắt, dọn dẹp interval')
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
         intervalRef.current = null
@@ -94,27 +122,48 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
       return
     }
 
+    let retryCount = 0
+    const maxRetries = 10
+
     // Wait for video to be available
     const waitForVideo = () => {
+      console.log(`[AI] Thử tìm video (lần ${retryCount + 1}/${maxRetries})...`)
       const video = findLocalVideo()
+      
       if (video) {
+        console.log('[AI] ✅ Đã tìm thấy video, bắt đầu detection loop')
         videoRef.current = video
-        // Start detection loop - every 5 seconds
-        intervalRef.current = setInterval(runDetection, 5000)
+        
+        // Run immediately first time
+        runDetection()
+        
+        // Then start detection loop - every 5 seconds
+        intervalRef.current = setInterval(() => {
+          console.log('[AI] Chạy detection định kỳ...')
+          runDetection()
+        }, 5000)
       } else {
-        setTimeout(waitForVideo, 1000)
+        retryCount++
+        if (retryCount < maxRetries) {
+          console.log('[AI] Chưa tìm thấy video, thử lại sau 1s...')
+          setTimeout(waitForVideo, 1000)
+        } else {
+          console.error('[AI] ❌ Không thể tìm thấy video sau', maxRetries, 'lần thử')
+        }
       }
     }
 
+    console.log('[AI] Đợi 2s trước khi tìm video...')
     setTimeout(waitForVideo, 2000)
 
     return () => {
+      console.log('[AI] Cleanup: dọn dẹp interval và detector')
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
       cleanupDetector()
     }
-  }, [isAIOn, findLocalVideo, runDetection])
+  }, [isAIOn])
 
   const toggleAI = () => {
     setIsAIOn(!isAIOn)
