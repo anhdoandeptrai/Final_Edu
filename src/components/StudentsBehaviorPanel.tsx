@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
-import { useMeeting } from '../contexts/MeetingContext'
 
 export interface StudentBehavior {
   userId: string
@@ -35,53 +33,50 @@ export function getStudentBehaviors() {
 export default function StudentsBehaviorPanel() {
   const [behaviors, setBehaviors] = useState<StudentBehavior[]>([])
   const [isExpanded, setIsExpanded] = useState(true)
-  const params = useParams()
-  const code = params?.code as string
-  const { getStudents } = useMeeting()
 
   useEffect(() => {
+    setBehaviors([...getStudentBehaviors()])
+    
     const unsubscribe = subscribeToStudentBehaviors(() => {
       setBehaviors([...getStudentBehaviors()])
     })
     return unsubscribe
   }, [])
 
-  // Get students from meeting context
-  const meetingStudents = code ? getStudents(code) : []
-
-  // Get unique students from behaviors
-  const studentsFromBehaviors = new Map<string, StudentBehavior>()
+  // Get unique students from behaviors with their latest status
+  const studentsMap = new Map<string, StudentBehavior>()
+  
+  // Iterate through behaviors from most recent to oldest
+  // Only keep the first (most recent) behavior for each student
   behaviors.forEach(behavior => {
-    if (!studentsFromBehaviors.has(behavior.userId)) {
-      studentsFromBehaviors.set(behavior.userId, behavior)
+    if (!studentsMap.has(behavior.userId)) {
+      studentsMap.set(behavior.userId, behavior)
     }
   })
 
-  // Combine both sources - prioritize meeting students
-  const allStudents = meetingStudents.map(student => {
-    const behavior = studentsFromBehaviors.get(student.userId)
-    return behavior || {
-      userId: student.userId,
-      userName: student.userName,
-      label: 'Đang tham gia',
-      emoji: '👤',
-      color: '#6b7280',
-      timestamp: student.joinedAt
-    }
-  })
+  const allStudents = Array.from(studentsMap.values())
+  console.log('[StudentsBehaviorPanel] Số học sinh:', allStudents.length)
+  console.log('[StudentsBehaviorPanel] Behaviors:', behaviors.length)
 
   // Calculate statistics based on latest behavior for each student
-  const getLatestBehaviorForStudent = (userId: string) => {
-    const studentBehaviors = behaviors.filter(b => b.userId === userId)
-    return studentBehaviors[studentBehaviors.length - 1]?.label
-  }
-
   const stats = {
-    focused: allStudents.filter(s => getLatestBehaviorForStudent(s.userId) === 'Tập trung').length,
-    distracted: allStudents.filter(s => getLatestBehaviorForStudent(s.userId) === 'Mất tập trung').length,
-    sleeping: allStudents.filter(s => getLatestBehaviorForStudent(s.userId) === 'Buồn ngủ').length,
+    focused: allStudents.filter(s => 
+      s.label === 'Tập trung' || 
+      s.label === 'Đang lắng nghe' || 
+      s.label === 'Giơ tay' ||
+      s.label === 'Gật đầu'
+    ).length,
+    distracted: allStudents.filter(s => 
+      s.label === 'Mất tập trung' || 
+      s.label === 'Cúi đầu' ||
+      s.label === 'Nghiêng đầu' ||
+      s.label === 'Lắc đầu'
+    ).length,
+    sleeping: allStudents.filter(s => s.label === 'Đang ngủ' || s.label === 'Buồn ngủ').length,
     total: allStudents.length
   }
+
+  console.log('[StudentsBehaviorPanel] Stats:', stats)
 
   return (
     <div style={{

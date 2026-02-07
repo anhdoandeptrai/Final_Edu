@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { aiDetector, BehaviorResult } from '../lib/ai-detector'
 import { addBehaviorEntry } from './BehaviorHistoryPanel'
 import { addStudentBehavior } from './StudentsBehaviorPanel'
-import { detectBehavior, initDetector, cleanupDetector } from '../lib/ai-detector'
 
 interface Props {
   enabled?: boolean
@@ -11,23 +11,16 @@ interface Props {
   userName?: string
 }
 
-interface BehaviorResult {
-  label: string
-  emoji: string
-  color: string
-  type: 'positive' | 'negative' | 'neutral' | 'warning'
-  confidence?: number
-}
-
 export default function AIBehaviorDetector({ enabled = true, userId, userName }: Props) {
   const [behavior, setBehavior] = useState<BehaviorResult | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [isAIOn, setIsAIOn] = useState(enabled)
-  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const detectorInitialized = useRef(false)
 
   const findLocalVideo = useCallback((): HTMLVideoElement | null => {
+    // Find the local (muted) video element from LiveKit
     const videos = Array.from(document.querySelectorAll('video'))
     console.log('[AI] Tìm thấy', videos.length, 'video elements')
     
@@ -41,7 +34,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
         videoHeight: video.videoHeight
       })
       
-      // Try to find local video (usually muted) with video stream
+      // Find video with active stream and video dimensions
       if (video.srcObject && video.readyState >= 2 && video.videoWidth > 0) {
         console.log('[AI] ✅ Tìm thấy video phù hợp:', i)
         return video
@@ -64,24 +57,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
     videoRef.current = video
     console.log('[AI] ✅ Đang sử dụng video element')
     
-    // Initialize detector on first run
-    if (!detectorInitialized.current) {
-      console.log('[AI] Đang khởi tạo AI detector...')
-      setIsLoading(true)
-      const initialized = await initDetector()
-      if (!initialized) {
-        console.error('[AI] ❌ Không thể khởi tạo AI detector')
-        setIsLoading(false)
-        return
-      }
-      console.log('[AI] ✅ AI detector đã sẵn sàng')
-      detectorInitialized.current = true
-      setIsLoading(false)
-    }
-
-    // Run real AI detection
-    console.log('[AI] Đang phân tích hành vi...')
-    const result = await detectBehavior(video)
+    const result = await aiDetector.detect(video)
     if (!result) {
       console.log('[AI] ⚠️ Không có kết quả phát hiện')
       return
@@ -122,46 +98,70 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
       return
     }
 
-    let retryCount = 0
-    const maxRetries = 10
+    const init = async () => {
+      setIsLoading(true)
+      setError(null)
 
-    // Wait for video to be available
-    const waitForVideo = () => {
-      console.log(`[AI] Thử tìm video (lần ${retryCount + 1}/${maxRetries})...`)
-      const video = findLocalVideo()
-      
-      if (video) {
-        console.log('[AI] ✅ Đã tìm thấy video, bắt đầu detection loop')
-        videoRef.current = video
-        
-        // Run immediately first time
-        runDetection()
-        
-        // Then start detection loop - every 5 seconds
-        intervalRef.current = setInterval(() => {
-          console.log('[AI] Chạy detection định kỳ...')
-          runDetection()
-        }, 5000)
-      } else {
-        retryCount++
-        if (retryCount < maxRetries) {
-          console.log('[AI] Chưa tìm thấy video, thử lại sau 1s...')
-          setTimeout(waitForVideo, 1000)
-        } else {
-          console.error('[AI] ❌ Không thể tìm thấy video sau', maxRetries, 'lần thử')
+      try {
+        console.log('[AI] Đang khởi tạo AI detector...')
+        const success = await aiDetector.initialize()
+        if (!success) {
+          console.error('[AI] ❌ Không thể khởi tạo AI')
+          setError('Không thể khởi tạo AI')
+          setIsLoading(false)
+          return
         }
+
+        console.log('[AI] ✅ AI detector đã sẵn sàng')
+        setIsLoading(false)
+
+        let retryCount = 0
+        const maxRetries = 10
+
+        // Wait for video to be available
+        const waitForVideo = () => {
+          console.log(`[AI] Thử tìm video (lần ${retryCount + 1}/${maxRetries})...`)
+          const video = findLocalVideo()
+          
+          if (video) {
+            console.log('[AI] ✅ Đã tìm thấy video, bắt đầu detection loop')
+            videoRef.current = video
+            
+            // Run immediately first time
+            runDetection()
+            
+            // Then start detection loop - every 500ms (2 FPS)
+            intervalRef.current = setInterval(() => {
+              console.log('[AI] Chạy detection định kỳ...')
+              runDetection()
+            }, 500)
+          } else {
+            retryCount++
+            if (retryCount < maxRetries) {
+              console.log('[AI] Chưa tìm thấy video, thử lại sau 1s...')
+              setTimeout(waitForVideo, 1000)
+            } else {
+              console.error('[AI] ❌ Không thể tìm thấy video sau', maxRetries, 'lần thử')
+            }
+          }
+        }
+
+        console.log('[AI] Đợi 2s trước khi tìm video...')
+        setTimeout(waitForVideo, 2000)
+      } catch (err) {
+        console.error('[AI] Lỗi khởi tạo AI:', err)
+        setError('Lỗi khởi tạo AI')
+        setIsLoading(false)
       }
     }
 
-    console.log('[AI] Đợi 2s trước khi tìm video...')
-    setTimeout(waitForVideo, 2000)
+    init()
 
     return () => {
-      console.log('[AI] Cleanup: dọn dẹp interval và detector')
+      console.log('[AI] Cleanup: dọn dẹp interval')
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
-      cleanupDetector()
     }
   }, [isAIOn])
 
@@ -169,7 +169,6 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
     setIsAIOn(!isAIOn)
     if (isAIOn) {
       setBehavior(null)
-      detectorInitialized.current = false
     }
   }
 
@@ -184,27 +183,6 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
       gap: 8
     }}>
       {/* AI Status Badge */}
-      {isLoading && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 1rem',
-            borderRadius: '12px',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            background: 'var(--bg-primary)',
-            color: '#6b7280',
-            border: '2px solid rgba(107, 114, 128, 0.3)',
-            boxShadow: 'var(--shadow-md)'
-          }}
-        >
-          <span style={{ fontSize: '1.25rem' }}>⏳</span>
-          <span>Đang tải AI...</span>
-        </div>
-      )}
-      
       {isAIOn && behavior && !isLoading && (
         <div
           style={{
@@ -224,6 +202,42 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
         >
           <span style={{ fontSize: '1.25rem' }}>{behavior.emoji}</span>
           <span>{behavior.label}</span>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isAIOn && isLoading && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.625rem 1rem',
+            borderRadius: '12px',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            background: 'var(--bg-primary)',
+            color: '#6b7280',
+            border: '2px solid rgba(107, 114, 128, 0.3)',
+            boxShadow: 'var(--shadow-md)'
+          }}
+        >
+          <span style={{ fontSize: '1.25rem', animation: 'spin 1s linear infinite' }}>⏳</span>
+          <span>Đang tải AI...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div style={{
+          padding: '0.5rem 1rem',
+          borderRadius: '12px',
+          fontSize: '0.75rem',
+          background: 'rgba(239, 68, 68, 0.1)',
+          color: 'var(--danger)',
+          border: '1px solid rgba(239, 68, 68, 0.3)'
+        }}>
+          {error}
         </div>
       )}
 
@@ -254,6 +268,9 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(-5px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

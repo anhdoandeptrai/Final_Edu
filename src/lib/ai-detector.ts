@@ -1,209 +1,262 @@
+// AI Behavior Detector using TensorFlow.js MoveNet
+import * as tf from '@tensorflow/tfjs'
 import * as poseDetection from '@tensorflow-models/pose-detection'
-import '@tensorflow/tfjs'
 
-export interface BehaviorDetectionResult {
+export interface BehaviorResult {
   label: string
   emoji: string
   color: string
+  bgColor: string
   type: 'positive' | 'negative' | 'neutral' | 'warning'
-  confidence: number
 }
 
-let detector: poseDetection.PoseDetector | null = null
-let isInitializing = false
-let initializationFailed = false
+interface Point {
+  x: number
+  y: number
+}
 
-export async function initDetector(): Promise<boolean> {
-  console.log('[AI-Detector] Bắt đầu khởi tạo detector...')
-  
-  if (detector) {
-    console.log('[AI-Detector] ✅ Detector đã tồn tại')
-    return true
-  }
-  
-  if (isInitializing) {
-    console.log('[AI-Detector] ⏳ Đang khởi tạo...')
-    return false
-  }
-  
-  if (initializationFailed) {
-    console.log('[AI-Detector] ❌ Khởi tạo đã thất bại trước đó')
-    return false
-  }
-  
-  isInitializing = true
-  
-  try {
-    // Check if running in browser and WebGL is available
-    if (typeof window === 'undefined') {
-      console.warn('[AI-Detector] ❌ Chỉ chạy được trên browser')
-      isInitializing = false
-      initializationFailed = true
+class AIDetector {
+  private detector: poseDetection.PoseDetector | null = null
+  private historyBuffer: Point[] = []
+  private readonly BUFFER_SIZE = 15
+  private isInitialized = false
+  private isInitializing = false
+
+  async initialize(): Promise<boolean> {
+    if (this.isInitialized) return true
+    if (this.isInitializing) return false
+
+    this.isInitializing = true
+    
+    try {
+      console.log('[AI] Setting up TensorFlow backend...')
+      
+      // Set backend to webgl (more compatible than webgpu)
+      await tf.setBackend('webgl')
+      await tf.ready()
+      
+      console.log('[AI] TensorFlow ready, backend:', tf.getBackend())
+      console.log('[AI] Initializing MoveNet...')
+      
+      const model = poseDetection.SupportedModels.MoveNet
+      this.detector = await poseDetection.createDetector(model, {
+        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+      })
+      
+      this.isInitialized = true
+      this.isInitializing = false
+      console.log('[AI] MoveNet initialized successfully!')
+      return true
+    } catch (err) {
+      console.error('[AI] Failed to initialize:', err)
+      this.isInitializing = false
       return false
     }
-
-    console.log('[AI-Detector] 🔄 Đang tải MoveNet model...')
-    // Use MoveNet model - lightweight and fast for browser
-    const model = poseDetection.SupportedModels.MoveNet
-    detector = await poseDetection.createDetector(model, {
-      modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING
-    })
-    console.log('[AI-Detector] ✅ MoveNet model đã tải thành công')
-    isInitializing = false
-    return true
-  } catch (error) {
-    console.error('[AI-Detector] ❌ Lỗi khi khởi tạo pose detector:', error)
-    console.warn('[AI-Detector] AI detection sẽ bị tắt')
-    isInitializing = false
-    initializationFailed = true
-    return false
   }
-}
 
-export async function detectBehavior(video: HTMLVideoElement): Promise<BehaviorDetectionResult | null> {
-  if (!detector) {
-    console.log('[AI-Detector] Detector chưa sẵn sàng, đang khởi tạo...')
-    const initialized = await initDetector()
-    if (!initialized) {
-      console.error('[AI-Detector] ❌ Không thể khởi tạo detector')
+
+  async detect(video: HTMLVideoElement): Promise<BehaviorResult | null> {
+    if (!this.detector || !video || video.readyState < 2) {
+      return null
+    }
+
+    try {
+      const poses = await this.detector.estimatePoses(video)
+      
+      if (!poses || poses.length === 0 || !poses[0].keypoints) {
+        return {
+          label: 'Không thấy người',
+          emoji: '❓',
+          color: '#64748b',
+          bgColor: 'rgba(100, 116, 139, 0.2)',
+          type: 'neutral'
+        }
+      }
+
+      const keypoints = poses[0].keypoints
+      return this.analyzeBehavior(keypoints)
+    } catch (err) {
+      console.error('[AI] Detection error:', err)
       return null
     }
   }
 
-  try {
-    console.log('[AI-Detector] 🔍 Đang phát hiện pose...')
-    console.log('[AI-Detector] Video:', {
-      width: video.videoWidth,
-      height: video.videoHeight,
-      readyState: video.readyState
-    })
-    
-    const poses = await detector!.estimatePoses(video)
-    console.log('[AI-Detector] Tìm thấy', poses.length, 'pose(s)')
-    
-    if (poses.length === 0) {
-      console.log('[AI-Detector] ⚠️ Không phát hiện người')
+  private analyzeBehavior(keypoints: poseDetection.Keypoint[]): BehaviorResult {
+    // MoveNet keypoints: nose(0), leftEye(1), rightEye(2), leftEar(3), rightEar(4),
+    // leftShoulder(5), rightShoulder(6), leftElbow(7), rightElbow(8),
+    // leftWrist(9), rightWrist(10), leftHip(11), rightHip(12)...
+
+    const nose = keypoints[0]
+    const leftEye = keypoints[1]
+    const rightEye = keypoints[2]
+    const leftEar = keypoints[3]
+    const rightEar = keypoints[4]
+    const leftShoulder = keypoints[5]
+    const rightShoulder = keypoints[6]
+    const leftWrist = keypoints[9]
+    const rightWrist = keypoints[10]
+
+    // Check confidence
+    if (!nose || (nose.score ?? 0) < 0.3) {
       return {
-        label: 'Không phát hiện',
-        emoji: '👻',
-        color: '#6b7280',
-        type: 'neutral',
-        confidence: 0
+        label: 'Không thấy người',
+        emoji: '❓',
+        color: '#64748b',
+        bgColor: 'rgba(100, 116, 139, 0.2)',
+        type: 'neutral'
       }
     }
 
-    const pose = poses[0]
-    const keypoints = pose.keypoints
-    console.log('[AI-Detector] Keypoints:', keypoints.length)
+    const shoulderY = (leftShoulder.y + rightShoulder.y) / 2
+    const shoulderX = (leftShoulder.x + rightShoulder.x) / 2
+    const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x)
+    const eyeMidY = (leftEye.y + rightEye.y) / 2
 
-    // Get key body parts
-    const nose = keypoints.find(kp => kp.name === 'nose')
-    const leftEye = keypoints.find(kp => kp.name === 'left_eye')
-    const rightEye = keypoints.find(kp => kp.name === 'right_eye')
-    const leftShoulder = keypoints.find(kp => kp.name === 'left_shoulder')
-    const rightShoulder = keypoints.find(kp => kp.name === 'right_shoulder')
+    // Update history for gesture detection
+    this.updateHistory({ x: nose.x, y: nose.y })
+    const headGesture = this.detectHeadGesture()
 
-    console.log('[AI-Detector] Phát hiện các điểm:', {
-      nose: nose?.score,
-      leftEye: leftEye?.score,
-      rightEye: rightEye?.score,
-      leftShoulder: leftShoulder?.score,
-      rightShoulder: rightShoulder?.score
-    })
+    // --- DETECTION RULES ---
 
-    // Calculate confidence scores
-    const faceConfidence = Math.min(
-      nose?.score || 0,
-      leftEye?.score || 0,
-      rightEye?.score || 0
-    )
+    // Sleeping: head dropped significantly
+    const distNoseToShoulder = Math.abs(shoulderY - nose.y)
+    const distEyeToShoulder = Math.abs(shoulderY - eyeMidY)
+    if (distNoseToShoulder < distEyeToShoulder * 0.5 && headGesture === 'STILL') {
+      return {
+        label: 'Đang ngủ',
+        emoji: '😴',
+        color: '#a855f7',
+        bgColor: 'rgba(168, 85, 247, 0.2)',
+        type: 'negative'
+      }
+    }
 
-    const shoulderConfidence = Math.min(
-      leftShoulder?.score || 0,
-      rightShoulder?.score || 0
-    )
-
-    console.log('[AI-Detector] Confidence:', {
-      face: faceConfidence.toFixed(2),
-      shoulder: shoulderConfidence.toFixed(2)
-    })
-
-    // If face is not visible (low confidence), person might be looking away
-    if (faceConfidence < 0.3) {
-      console.log('[AI-Detector] ⚠️ Khuôn mặt không rõ ->', 'Mất tập trung')
+    // Distracted: head turned away
+    const noseOffset = Math.abs(nose.x - shoulderX)
+    if (shoulderWidth > 0 && noseOffset > shoulderWidth * 0.3) {
       return {
         label: 'Mất tập trung',
-        emoji: '⚠️',
-        color: '#f59e0b',
-        type: 'warning',
-        confidence: faceConfidence
+        emoji: '👀',
+        color: '#f43f5e',
+        bgColor: 'rgba(244, 63, 94, 0.2)',
+        type: 'negative'
       }
     }
 
-    // Check head position relative to shoulders
-    if (nose && leftShoulder && rightShoulder) {
-      const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2
-      const headDrop = nose.y - shoulderMidY
-
-      console.log('[AI-Detector] Phân tích tư thế:', {
-        headDrop: headDrop.toFixed(2),
-        noseY: nose.y.toFixed(2),
-        shoulderMidY: shoulderMidY.toFixed(2)
-      })
-
-      // If head is significantly below shoulders, might be sleeping
-      if (headDrop > 100 && faceConfidence > 0.5) {
-        console.log('[AI-Detector] 😴 Đầu cúi xuống ->', 'Buồn ngủ')
+    // Head tilt
+    if ((leftEar.score ?? 0) > 0.3 && (rightEar.score ?? 0) > 0.3) {
+      const earDiff = Math.abs(leftEar.y - rightEar.y)
+      if (shoulderWidth > 0 && earDiff > shoulderWidth * 0.2) {
         return {
-          label: 'Buồn ngủ',
-          emoji: '😴',
-          color: '#ef4444',
-          type: 'negative',
-          confidence: faceConfidence
-        }
-      }
-
-      // If head is tilted too much
-      if (leftEye && rightEye) {
-        const eyeAngle = Math.abs(Math.atan2(
-          rightEye.y - leftEye.y,
-          rightEye.x - leftEye.x
-        ))
-        
-        console.log('[AI-Detector] Góc nghiêng đầu:', (eyeAngle * 180 / Math.PI).toFixed(2), 'độ')
-        
-        if (eyeAngle > 0.3) { // ~17 degrees
-          console.log('[AI-Detector] ⚠️ Đầu nghiêng quá ->', 'Mất tập trung')
-          return {
-            label: 'Mất tập trung',
-            emoji: '⚠️',
-            color: '#f59e0b',
-            type: 'warning',
-            confidence: faceConfidence
-          }
+          label: 'Nghiêng đầu',
+          emoji: '⚠️',
+          color: '#f59e0b',
+          bgColor: 'rgba(245, 158, 11, 0.2)',
+          type: 'warning'
         }
       }
     }
 
-    // Default: person is focused (face visible, upright posture)
-    console.log('[AI-Detector] ✅ Tư thế tốt ->', 'Tập trung')
+    // Looking down (phone)
+    if ((leftEar.score ?? 0) > 0.3 && (rightEar.score ?? 0) > 0.3) {
+      if (nose.y > leftEar.y + 30 && nose.y > rightEar.y + 30) {
+        return {
+          label: 'Cúi đầu',
+          emoji: '📱',
+          color: '#f43f5e',
+          bgColor: 'rgba(244, 63, 94, 0.2)',
+          type: 'negative'
+        }
+      }
+    }
+
+    // Raising hand
+    if ((leftWrist.score ?? 0) > 0.3 && leftWrist.y < leftShoulder.y - 50) {
+      return {
+        label: 'Giơ tay',
+        emoji: '✋',
+        color: '#10b981',
+        bgColor: 'rgba(16, 185, 129, 0.2)',
+        type: 'positive'
+      }
+    }
+    if ((rightWrist.score ?? 0) > 0.3 && rightWrist.y < rightShoulder.y - 50) {
+      return {
+        label: 'Giơ tay',
+        emoji: '✋',
+        color: '#10b981',
+        bgColor: 'rgba(16, 185, 129, 0.2)',
+        type: 'positive'
+      }
+    }
+
+    // Head gestures
+    if (headGesture === 'NOD') {
+      return {
+        label: 'Gật đầu',
+        emoji: '👍',
+        color: '#10b981',
+        bgColor: 'rgba(16, 185, 129, 0.2)',
+        type: 'positive'
+      }
+    }
+
+    if (headGesture === 'SHAKE') {
+      return {
+        label: 'Lắc đầu',
+        emoji: '👎',
+        color: '#f97316',
+        bgColor: 'rgba(249, 115, 22, 0.2)',
+        type: 'warning'
+      }
+    }
+
+    // Default: Listening attentively
     return {
-      label: 'Tập trung',
+      label: 'Đang lắng nghe',
       emoji: '✅',
-      color: '#10b981',
-      type: 'positive',
-      confidence: faceConfidence
+      color: '#3b82f6',
+      bgColor: 'rgba(59, 130, 246, 0.2)',
+      type: 'positive'
     }
+  }
 
-  } catch (error) {
-    console.error('[AI-Detector] ❌ Lỗi khi phát hiện hành vi:', error)
-    return null
+  private updateHistory(point: Point): void {
+    this.historyBuffer.push(point)
+    if (this.historyBuffer.length > this.BUFFER_SIZE) {
+      this.historyBuffer.shift()
+    }
+  }
+
+  private detectHeadGesture(): string {
+    if (this.historyBuffer.length < 8) return 'MOVING'
+
+    let xMin = Infinity, xMax = -Infinity
+    let yMin = Infinity, yMax = -Infinity
+
+    this.historyBuffer.forEach(p => {
+      if (p.x < xMin) xMin = p.x
+      if (p.x > xMax) xMax = p.x
+      if (p.y < yMin) yMin = p.y
+      if (p.y > yMax) yMax = p.y
+    })
+
+    const xRange = xMax - xMin
+    const yRange = yMax - yMin
+
+    if (yRange > 20 && xRange < 10) return 'NOD'
+    if (xRange > 25 && yRange < 10) return 'SHAKE'
+    if (xRange < 5 && yRange < 5) return 'STILL'
+    return 'MOVING'
+  }
+
+  reset(): void {
+    this.historyBuffer = []
+  }
+
+  isReady(): boolean {
+    return this.isInitialized
   }
 }
 
-export function cleanupDetector() {
-  if (detector) {
-    detector.dispose()
-    detector = null
-  }
-}
+export const aiDetector = new AIDetector()
