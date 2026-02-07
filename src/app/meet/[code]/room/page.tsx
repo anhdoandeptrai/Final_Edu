@@ -41,6 +41,47 @@ interface MeetSettings {
   userId?: string
 }
 
+// AI Detection Manager - Renders AI detectors for all participants (for teacher)
+function AIDetectionManager({ settings }: { settings: MeetSettings }) {
+  const participants = useParticipants()
+  const { localParticipant } = useLocalParticipant()
+  
+  if (settings.userRole === 'student') {
+    // Students detect their own behavior
+    return (
+      <AIBehaviorDetector 
+        enabled={true} 
+        userId={settings.userId}
+        userName={settings.userName}
+      />
+    )
+  }
+  
+  if (settings.userRole === 'teacher') {
+    // Teachers detect all remote participants (students)
+    return (
+      <>
+        {participants.map((participant) => {
+          // Don't detect self
+          if (participant.sid === localParticipant?.sid) return null
+          
+          return (
+            <AIBehaviorDetector
+              key={participant.sid}
+              enabled={true}
+              userId={participant.sid}
+              userName={participant.name || participant.identity}
+              participantSid={participant.sid}
+            />
+          )
+        })}
+      </>
+    )
+  }
+  
+  return null
+}
+
 // Custom Video Grid Component
 function VideoGrid() {
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare])
@@ -52,9 +93,11 @@ function VideoGrid() {
   // Check if local participant has video track
   const localHasVideo = videoTracks.some(t => t.participant.sid === localParticipant?.sid)
 
-  // Get participants without video
+  // Get participants without video (excluding local participant to avoid duplication)
   const participantsWithVideo = new Set(videoTracks.map(t => t.participant.sid))
-  const participantsWithoutVideo = participants.filter(p => !participantsWithVideo.has(p.sid))
+  const participantsWithoutVideo = participants.filter(p => 
+    !participantsWithVideo.has(p.sid) && p.sid !== localParticipant?.sid
+  )
 
   const getInitials = (name: string) => {
     return (name || 'U').charAt(0).toUpperCase()
@@ -694,14 +737,8 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
         )}
       </div>
 
-      {/* AI Behavior Detector - For students */}
-      {settings.userRole === 'student' && (
-        <AIBehaviorDetector 
-          enabled={true} 
-          userId={settings.userId}
-          userName={settings.userName}
-        />
-      )}
+      {/* AI Detection Manager - Detects behavior for students or all participants for teachers */}
+      <AIDetectionManager settings={settings} />
       
       {/* Students Behavior Panel - Only for teachers */}
       {settings.userRole === 'teacher' && <StudentsBehaviorPanel />}

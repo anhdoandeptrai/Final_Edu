@@ -9,9 +9,10 @@ interface Props {
   enabled?: boolean
   userId?: string
   userName?: string
+  participantSid?: string // For detecting remote participants
 }
 
-export default function AIBehaviorDetector({ enabled = true, userId, userName }: Props) {
+export default function AIBehaviorDetector({ enabled = true, userId, userName, participantSid }: Props) {
   const [behavior, setBehavior] = useState<BehaviorResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAIOn, setIsAIOn] = useState(enabled)
@@ -20,29 +21,39 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const findLocalVideo = useCallback((): HTMLVideoElement | null => {
-    // Find the local (muted) video element from LiveKit
+    // Find the video element - either local or specific participant
     const videos = Array.from(document.querySelectorAll('video'))
-    console.log('[AI] Tìm thấy', videos.length, 'video elements')
+    console.log('[AI] Tìm thấy', videos.length, 'video elements', participantSid ? `(tìm participant: ${participantSid})` : '(tìm local)')
     
     for (let i = 0; i < videos.length; i++) {
       const video = videos[i]
-      console.log(`[AI] Video ${i}:`, {
-        muted: video.muted,
-        hasSrcObject: !!video.srcObject,
-        readyState: video.readyState,
-        videoWidth: video.videoWidth,
-        videoHeight: video.videoHeight
-      })
       
-      // Find video with active stream and video dimensions
-      if (video.srcObject && video.readyState >= 2 && video.videoWidth > 0) {
-        console.log('[AI] ✅ Tìm thấy video phù hợp:', i)
-        return video
+      // If looking for specific participant, match by checking video container or data attributes
+      if (participantSid) {
+        // Check if this video belongs to the participant
+        // LiveKit videos are wrapped in containers with participant info
+        const container = video.closest('[data-lk-participant-sid]') || 
+                         video.closest('[data-lk-participant]')
+        
+        if (container) {
+          const sid = container.getAttribute('data-lk-participant-sid') || 
+                     container.getAttribute('data-lk-participant')
+          if (sid === participantSid && video.srcObject && video.readyState >= 2 && video.videoWidth > 0) {
+            console.log('[AI] ✅ Tìm thấy video của participant:', participantSid)
+            return video
+          }
+        }
+      } else {
+        // Find local video (usually muted)
+        if (video.srcObject && video.readyState >= 2 && video.videoWidth > 0) {
+          console.log('[AI] ✅ Tìm thấy video phù hợp:', i)
+          return video
+        }
       }
     }
     console.log('[AI] ❌ Không tìm thấy video phù hợp')
     return null
-  }, [])
+  }, [participantSid])
 
   const runDetection = useCallback(async () => {
     console.log('[AI] Bắt đầu phát hiện, isAIOn:', isAIOn)
@@ -175,9 +186,9 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName }:
   return (
     <div style={{
       position: 'fixed',
-      top: 70,
-      left: 16,
-      zIndex: 1000,
+      top: participantSid ? -9999 : 70, // Hide if detecting remote participant
+      left: participantSid ? -9999 : 16,
+      zIndex: participantSid ? -1 : 1000,
       display: 'flex',
       flexDirection: 'column',
       gap: 8
