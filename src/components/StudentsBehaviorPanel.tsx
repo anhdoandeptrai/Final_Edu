@@ -266,11 +266,7 @@ export default function StudentsBehaviorPanel() {
                     borderRadius: '12px',
                     border: `2px solid ${student.color}40`,
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    ':hover': {
-                      transform: 'translateX(-4px)',
-                      boxShadow: 'var(--shadow-md)'
-                    }
+                    transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateX(-4px)'
