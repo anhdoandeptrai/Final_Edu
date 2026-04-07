@@ -6,6 +6,212 @@
 
 ---
 
+## 🚀 Quick Start for New Developers
+
+### First Time Setup
+```bash
+# 1. Clone and navigate
+cd Final_Edu
+
+# 2. Install dependencies
+npm install
+
+# 3. Run development server
+npm run dev
+
+# 4. Visit http://localhost:3000
+```
+
+### Test the app (Manual Testing):
+```javascript
+// Test Account 1 (Teacher)
+- Email: teacher@test.com
+- Password: teacher123
+- Role: Teacher
+
+// Test Account 2 (Student)  
+- Email: student@test.com
+- Password: student123
+- Role: Student
+```
+
+**Quick Test Flow:**
+1. Login as teacher → "New Meeting" → Share code
+2. Open new browser/incognito → Login as student → Enter room code
+3. Grant camera permissions
+4. Teacher should see student in dashboard
+5. AI should detect behavior (watch console for `[AI]` logs)
+
+### Key Files to Know
+| File | Purpose | Status |
+|------|---------|--------|
+| `src/contexts/MeetingContext.tsx` | Global meeting + behavior state | ✅ Core |
+| `src/contexts/AuthContext.tsx` | Authentication | ✅ Core |
+| `src/lib/ai-detector.ts` | AI algorithm | ✅ Core |
+| `src/components/AIBehaviorDetector.tsx` | AI UI + detection | ✅ Core |
+| `src/app/meet/[code]/room/page.tsx` | Main video room | ✅ Core |
+| `src/app/dashboard/page.tsx` | Teacher dashboard | ✅ Working |
+| `src/app/history/page.tsx` | Analytics page | ❌ Incomplete |
+| `src/app/settings/page.tsx` | Settings | ❌ Not functional |
+
+---
+
+## �️ Project Architecture Overview
+
+### Folder Structure
+```
+src/
+├── app/                          # Next.js pages & routes
+│   ├── api/meet/token/           # LiveKit token generation API
+│   ├── auth/page.tsx             # Login/Register
+│   ├── dashboard/page.tsx        # Teacher dashboard (main hub)
+│   ├── history/page.tsx          # Analytics & history (INCOMPLETE)
+│   ├── meet/[code]/              # Room selection
+│   │   └── room/page.tsx         # Video room (main meeting page)
+│   ├── meeting/page.tsx          # Pre-join setup
+│   └── settings/page.tsx         # Settings (NOT FUNCTIONAL)
+│
+├── components/                   # React components
+│   ├── AIBehaviorDetector.tsx    # AI detection logic + UI
+│   ├── BehaviorHistoryPanel.tsx  # Shows behavior events
+│   ├── DashboardLayout.tsx       # Layout wrapper
+│   ├── Sidebar.tsx               # Navigation sidebar
+│   └── StudentsBehaviorPanel.tsx # Teacher's class overview
+│
+├── contexts/
+│   ├── AuthContext.tsx           # User auth & role management
+│   └── MeetingContext.tsx        # Meeting state & behavior history
+│
+└── lib/
+    └── ai-detector.ts           # AI detection algorithm
+```
+
+### Key Technologies
+- **Frontend:** Next.js 16, React 18, TypeScript
+- **Video:** LiveKit WebRTC (cloud-hosted SFU)
+- **AI:** TensorFlow.js + MoveNet (pose detection)
+- **State:** React Context API (AuthContext, MeetingContext)
+- **Auth:** localStorage + JSON Web Tokens
+- **Styling:** CSS modules (imported from LiveKit components)
+
+### Data Flow
+```
+User Login (AuthContext)
+    ↓
+Create/Join Meeting (MeetingContext)
+    ↓
+Get LiveKit Token (API route)
+    ↓
+Open Video Room
+    ├── Live video via LiveKit
+    ├── AI Detection (TensorFlow.js)
+    │   └── Store behavior in MeetingContext
+    └── UI updates reflect behavior
+        ├── Student sees own history
+        └── Teacher sees class overview
+```
+
+---
+
+## �🎯 Tình trạng phát triển (Development Status)
+
+### ✅ COMPLETED (Hoàn tất - Sẵn sàng sử dụng)
+- [x] Video Conferencing HD real-time (LiveKit WebRTC)
+- [x] Audio/Video controls (Mic, Camera toggle)
+- [x] Screen sharing support
+- [x] Participant management (Grid layout, name badges, avatars)
+- [x] Authentication & Authorization (Teacher/Student roles)
+- [x] Pre-join setup (Device checking)
+- [x] User dashboard & profile
+- [x] AI Behavior Detection Engine (9 behaviors)
+- [x] Teacher Dashboard Panel (Real-time class overview)
+- [x] Student Behavior History Panel (Personal activity log)
+- [x] Navigation & Routing (All 8 pages)
+
+### 🚧 IN PROGRESS (Đang phát triển - Cần hoàn thiện)
+- [ ] **Analytics & Statistics** (60% done)
+  - ✅ UI components built
+  - ❌ Statistics on History page show hardcoded "0" (needs data connection)
+  - ❌ Need to store behavior data persistently
+  - ❌ Date filtering not working
+  - ❌ Time-range selection not implemented
+  - **Location:** `src/app/history/page.tsx`
+  - **TODO:** Connect to real behavior history data from MeetingContext
+
+- [ ] **Settings Page** (30% done)
+  - ✅ UI elements present
+  - ❌ AI toggle not functional (doesn't control detection)
+  - ❌ Auto-record checkbox not hooked up
+  - ❌ Theme switching not implemented
+  - ❌ Settings not persisted to localStorage
+  - **Location:** `src/app/settings/page.tsx`
+  - **TODO:** Implement setting storage and apply to app behavior
+
+- [ ] **Screen Share** (70% done)
+  - ✅ Code present with proper layout (60% priority for shared screen)
+  - ✅ Screen share label visible
+  - ❌ Functionality not tested in practice
+  - **Location:** `src/app/meet/[code]/room/page.tsx` (line ~150)
+  - **TODO:** Test with actual screen shares, verify LiveKit config
+
+### 📋 NOT STARTED (Chưa bắt đầu)
+- [ ] **Data Persistence** (0%)
+  - Currently only stores in-memory (lost on page refresh)
+  - Need: Backend database (Firebase/Supabase) or IndexedDB
+  - Store: Meeting history, behavior timeline, user preferences
+  - **Estimate:** 2-3 days
+
+- [ ] **Recording & Playback** (0%)
+  - No recording UI
+  - No backend storage for videos
+  - **Estimate:** 3-5 days
+
+- [ ] **Export/Reports** (0%)
+  - CSV export for behavior history
+  - PDF report generation
+  - Teacher can send reports to parents
+  - **Estimate:** 1-2 days
+
+- [ ] **Accessibility** (0%)
+  - ARIA labels for screenreaders
+  - Keyboard navigation
+  - WCAG 2.1 AA compliance
+  - **Estimate:** 2-3 days
+
+- [ ] **Advanced Analytics Dashboard** (0%)
+  - Charts and visualizations (using Chart.js or Recharts)
+  - Behavior trend analysis
+  - Predictive insights
+  - **Estimate:** 3-4 days
+
+- [ ] **Unit & Integration Tests** (0%)
+  - Zero test files currently exist
+  - Need Jest + React Testing Library
+  - **Estimate:** 3-5 days
+
+---
+
+## 🔴 Known Issues & Limitations
+
+### Critical Issues
+
+| Issue | Severity | Location | Impact |
+|-------|----------|----------|--------|
+| **Video element discovery fails** | HIGH | `AIBehaviorDetector.tsx:45-75` | AI detection may not work with certain LiveKit layouts |
+| **Global state management** | MEDIUM | `BehaviorHistoryPanel.tsx` | Memory leaks possible, hard to debug |
+| **Statistics show "0"** | MEDIUM | `history/page.tsx` | Users see no data |
+| **No error handling** | MEDIUM | `room/page.tsx` | App crashes on connection failure |
+| **Performance > 20 users** | LOW | `StudentsBehaviorPanel.tsx` | Unknown if scales well |
+
+### Performance Notes
+
+- ⚠️ AI detection runs at 2 FPS (500ms interval) - CPU intensive
+- ⚠️ Keypoint confidence threshold hardcoded to 0.3 - not adaptive
+- ⚠️ ~50+ console.log statements - remove for production
+- ⚠️ localStorage limited to 5MB - won't hold long sessions
+
+---
+
 ## ✨ Tính năng chính
 
 ### 1. 🎥 Video Conferencing Real-time
@@ -336,34 +542,190 @@
 
 ---
 
-## 📈 Roadmap tương lai
+## �️ Development Guide - Next Steps
 
-### Phase 2:
-- [ ] Tích hợp voice detection (phát hiện giọng nói)
-- [ ] Emotion detection (phát hiện cảm xúc)
-- [ ] Recording & playback
-- [ ] Breakout rooms cho làm việc nhóm
+### Priority 1: Data Persistence (CRITICAL - Blocker for production)
 
-### Phase 3:
-- [ ] Mobile app (iOS/Android)
-- [ ] AI suggestions cho giáo viên
-- [ ] Gamification cho học sinh
-- [ ] Integration với LMS (Moodle, Canvas)
+**Status:** ❌ Not started | **Estimate:** 2-3 days
 
-### Phase 4:
-- [ ] Advanced analytics dashboard
-- [ ] Predictive analytics
-- [ ] Automated attendance
+**What to do:**
+1. Set up Firebase/Supabase backend (or use IndexedDB for local-first)
+2. Create tables: `meetings`, `behavior_history`, `user_preferences`
+3. Modify `MeetingContext.tsx` to persist behavior history
+4. Update `history/page.tsx` to fetch from database instead of hardcoded "0"
+5. Add proper timestamps for each behavior event
+
+**Files to modify:**
+```
+src/contexts/MeetingContext.tsx          (add persistence logic)
+src/app/api/meet/token/route.ts          (add data save endpoint)
+src/app/history/page.tsx                 (fetch from DB)
+src/app/dashboard/page.tsx               (fetch current session data)
+```
+
+**Success Criteria:**
+- ✅ Behavior history persists after page refresh
+- ✅ Statistics show real numbers (not "0")
+- ✅ Can filter by date/time range
+
+---
+
+### Priority 2: Fix Analytics Page
+
+**Status:** ⚠️ 40% done | **Estimate:** 1-2 days
+
+**What to do:**
+1. Connect History page to real MeetingContext data
+2. Remove hardcoded values (currently all "0")
+3. Implement date filtering UI
+4. Add search by student name
+5. Display actual timeline with behavior events
+
+**Files to modify:**
+```
+src/app/history/page.tsx                 (add data fetching, filtering)
+src/lib/ai-detector.ts                   (if needed for data formatting)
+```
+
+**Success Criteria:**
+- ✅ Real data shows on statistics page
+- ✅ Filter by date works
+- ✅ Can see individual student history
+
+---
+
+### Priority 3: AI Detection Robustness
+
+**Status:** ⚠️ 90% done | **Estimate:** 1 day
+
+**What to do:**
+1. Add error handling for video element discovery
+2. Test with actual participant videos from LiveKit
+3. Verify detection works in different lighting conditions
+4. Fine-tune keypoint confidence threshold (0.3)
+5. Reduce false positives from shaky videos
+
+**Files to modify:**
+```
+src/components/AIBehaviorDetector.tsx    (lines 45-75, improve element finding)
+src/lib/ai-detector.ts                   (possibly adjust thresholds)
+```
+
+**Testing Checklist:**
+- [ ] Works with camera off (no errors)
+- [ ] Works with 1 participant
+- [ ] Works with 3+ participants
+- [ ] Works in poor lighting
+- [ ] Accurate behavior detection
+
+---
+
+### Priority 4: Settings Page - Make Functional
+
+**Status:** ⚠️ 30% done | **Estimate:** 1-2 days
+
+**What to do:**
+1. Add localStorage for user settings
+2. Hook up AI toggle to actually enable/disable `AIBehaviorDetector.tsx`
+3. Implement theme switching (light/dark mode)
+4. Add preference for behavior detection sensitivity
+5. Persist all settings to localStorage
+
+**Files to modify:**
+```
+src/app/settings/page.tsx                (implement functionality)
+src/contexts/MeetingContext.tsx          (add settings context)
+src/components/AIBehaviorDetector.tsx    (respect AI toggle)
+```
+
+**Settings to implement:**
+```javascript
+{
+  aiEnabled: boolean,
+  detectionSensitivity: 0-1,  // 0.1 to 1.0
+  theme: 'light' | 'dark',
+  autoMute: boolean,
+  recordingEnabled: boolean
+}
+```
+
+---
+
+### Priority 5: Screen Share Testing
+
+**Status:** ⚠️ 70% done | **Estimate:** 0.5 day
+
+**What to do:**
+1. Test screen sharing feature end-to-end
+2. Verify grid layout (60% for shared screen, 40% for participants)
+3. Check if LiveKit config supports screen sharing
+4. Add helper text/UI hints for screen sharing
+
+**Files to test:**
+```
+src/app/meet/[code]/room/page.tsx        (line ~150)
+```
+
+**Testing Checklist:**
+- [ ] Share screen appears with priority layout
+- [ ] Can toggle screen share on/off
+- [ ] Other participants see shared screen
+- [ ] AI detection still works during screen share
+
+---
+
+### Priority 6: Medium-term Roadmap
+
+**Phase 2 (Weeks 3-4):**
+- [ ] Recording & Playback (3-5 days)
+- [ ] CSV/PDF Report Export (1-2 days)
+- [ ] Voice detection (phát hiện sinh viên nói) - 2 days
+- [ ] Emotion detection (OpenFace/TensorFlow) - 3 days
+
+**Phase 3 (Weeks 5-6):**
+- [ ] Mobile app (PWA or React Native) - 4-5 days
+- [ ] Breakout rooms for group work - 3 days
+- [ ] Advanced analytics with charts - 2-3 days
+- [ ] LMS integration (Moodle/Canvas) - 3-4 days
+
+**Phase 4 (Weeks 7+):**
+- [ ] Predictive analytics (ML model)
+- [ ] Automated attendance + grading
 - [ ] Multi-language support
+- [ ] Accessibility (WCAG 2.1 AA)
+
+---
+
+## 🧪 Testing Checklist
+
+Before pushing changes, verify:
+- [ ] App runs without errors: `npm run dev`
+- [ ] Can create meeting as teacher
+- [ ] Can join meeting as student with room code
+- [ ] Camera/mic toggles work
+- [ ] AI detection triggers when camera is on
+- [ ] Behavior history shows in panel
+- [ ] Navigation between pages works
+- [ ] No console errors (except maybe warnings)
 
 ---
 
 ## 📞 Liên hệ & Hỗ trợ
 
-- **Email:** support@eduinsightmeet.com
-- **Documentation:** https://docs.eduinsightmeet.com
 - **GitHub:** https://github.com/anhdoandeptrai/Final_Edu
+- **Issues:** Create GitHub issues for bugs/features
+- **Questions:** Check README.md for architecture docs
 
 ---
 
-**© 2026 Edu Insight Meet - Revolutionizing Online Education with AI**
+## 📝 Notes for Future Developers
+
+1. **This is pre-production** - Many features are MVP (minimum viable product)
+2. **Data is not persistent** - Everything resets on page refresh
+3. **AI detection is client-side** - Runs in browser, not server
+4. **No backend database yet** - Choose Firebase/Supabase or similar
+5. **Test with actual video** - Development with camera 🎥 is essential
+6. **Check console often** - ~50+ debug logs help track execution
+
+---
+
