@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { nanoid } from 'nanoid'
-import DashboardLayout from '../../components/DashboardLayout'
-import { useAuth } from '../../contexts/AuthContext'
-import { useMeeting } from '../../contexts/MeetingContext'
+import DashboardLayout from '../../shared/components/DashboardLayout'
+import { useAuth } from '../../shared/contexts/AuthContext'
+import { useMeeting } from '../../features/edu-meet/contexts/MeetingContext'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -27,10 +27,10 @@ export default function DashboardPage() {
   const handleCreateMeeting = async () => {
     setIsCreating(true)
     const code = nanoid(10)
-    
+
     // Create meeting in context
     createMeeting(code, user.id, user.name, user.role)
-    
+
     router.push(`/meet/${code}`)
   }
 
@@ -49,7 +49,7 @@ export default function DashboardPage() {
     <DashboardLayout children={
       <div className="container" style={{ paddingTop: '1rem', maxWidth: '540px' }}>
         {/* User Info */}
-        <div style={{ 
+        <div style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           borderRadius: '1rem',
           padding: '1.5rem',
@@ -100,8 +100,8 @@ export default function DashboardPage() {
         <div className="card animate-fadeIn">
           <h2 className="section-title">🚀 Tạo cuộc họp mới</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-            {user.role === 'teacher' 
-              ? 'Tạo phòng học và mời học sinh tham gia' 
+            {user.role === 'teacher'
+              ? 'Tạo phòng học và mời học sinh tham gia'
               : 'Tạo phòng họp và mời người khác tham gia'}
           </p>
           <button
@@ -148,6 +148,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Features */}
+        <div className="card animate-fadeIn" style={{ animationDelay: '0.15s' }}>
+          <h2 className="section-title">📚 LMS Mini</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+            Quản lý lớp học, bài học và bài tập ngay trong hệ thống.
+          </p>
+          <button
+            className="btn btn-secondary"
+            onClick={() => router.push('/lms')}
+          >
+            <span>➡️</span>
+            Mở LMS
+          </button>
+        </div>
+
+        {/* Features */}
         <div className="card animate-fadeIn" style={{ animationDelay: '0.2s' }}>
           <h2 className="section-title">✨ Tính năng</h2>
           <div style={{ display: 'grid', gap: '0.5rem' }}>
@@ -158,8 +173,8 @@ export default function DashboardPage() {
             <div className="feature-item">
               <div className="feature-icon">🤖</div>
               <span>
-                {user.role === 'teacher' 
-                  ? 'AI phân tích hành vi tất cả học sinh' 
+                {user.role === 'teacher'
+                  ? 'AI phân tích hành vi tất cả học sinh'
                   : 'AI phát hiện hành vi học tập'}
               </span>
             </div>

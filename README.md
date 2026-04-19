@@ -18,11 +18,12 @@ npm install
 
 ### 3. Cấu hình
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env.local
 ```
 
 Sửa `.env.local`:
 ```
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/final_edu?schema=public
 LIVEKIT_API_KEY=APIxxxxxxxx
 LIVEKIT_API_SECRET=xxxxxxxxxxxxxxxx
 NEXT_PUBLIC_LIVEKIT_URL=wss://your-project.livekit.cloud
@@ -30,10 +31,26 @@ NEXT_PUBLIC_LIVEKIT_URL=wss://your-project.livekit.cloud
 
 ### 4. Chạy
 ```bash
+npm run db:generate
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
 Mở http://localhost:3000
+
+## Demo Login (PostgreSQL)
+
+- Teacher: `teacher.demo@final-edu.local` / `123456`
+- Student: `student.demo@final-edu.local` / `123456`
+
+## Migrate dữ liệu LMS cũ từ JSON
+
+Nếu bạn đã có dữ liệu cũ trong `data/lms-store.json`:
+
+```bash
+npm run db:migrate-json
+```
 
 ## Test với 2 máy khác mạng
 

@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useAuth } from '../../../contexts/AuthContext'
-import { useMeeting } from '../../../contexts/MeetingContext'
+import { useAuth } from '../../../shared/contexts/AuthContext'
+import { useMeeting } from '../../../features/edu-meet/contexts/MeetingContext'
 
 interface DeviceStatus {
   camera: 'checking' | 'ok' | 'error'
@@ -149,7 +149,7 @@ export default function PreJoinPage() {
     if (videoRef.current) {
       videoRef.current.srcObject = null
     }
-    
+
     // Store settings with role and userId
     sessionStorage.setItem('meetSettings', JSON.stringify({
       userName: user.name,
@@ -160,10 +160,10 @@ export default function PreJoinPage() {
     }))
 
     addLog('Chuyển đến phòng họp...', 'success')
-    
+
     // Small delay to ensure settings are saved
     await new Promise(resolve => setTimeout(resolve, 50))
-    
+
     router.push(`/meet/${code}/room`)
   }
 
@@ -189,7 +189,7 @@ export default function PreJoinPage() {
             </span>
           </div>
           {user && (
-            <div style={{ 
+            <div style={{
               marginTop: '0.75rem',
               padding: '0.5rem 1rem',
               background: user.role === 'teacher' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',

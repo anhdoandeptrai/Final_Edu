@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AppUser {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         AppUserRole
+  createdAt    DateTime      @default(now())
+
+  sessions AuthSession[]
+
+  @@index([role])
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model LmsClass {
+  id          String               @id @default(cuid())
+  name        String
+  description String
+  teacherId   String
+  teacherName String
+  joinCode    String               @unique
+  createdAt   DateTime             @default(now())
+
+  lessons      LmsLesson[]
+  assignments  LmsAssignment[]
+  submissions  LmsSubmission[]
+  enrollments  LmsClassEnrollment[]
+
+  @@index([teacherId])
+}
+
+model LmsClassEnrollment {
+  classId   String
+  studentId String
+  createdAt DateTime @default(now())
+
+  class LmsClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([classId, studentId])
+  @@index([studentId])
+}
+
+model LmsLesson {
+  id          String    @id @default(cuid())
+  classId     String
+  title       String
+  description String
+  content     String
+  resourceUrl String?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+
+  class LmsClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@index([classId])
+}
+
+model LmsAssignment {
+  id           String          @id @default(cuid())
+  classId      String
+  title        String
+  instructions String
+  dueAt        DateTime
+  maxScore     Int
+  createdBy    String
+  createdAt    DateTime        @default(now())
+
+  class       LmsClass        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  submissions LmsSubmission[]
+
+  @@index([classId])
+}
+
+model LmsSubmission {
+  id           String              @id @default(cuid())
+  assignmentId String
+  classId      String
+  studentId    String
+  studentName  String
+  content      String
+  submittedAt  DateTime            @default(now())
+  status       LmsSubmissionStatus @default(submitted)
+  reviewedAt   DateTime?
+  score        Int?
+  feedback     String?
+
+  assignment LmsAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  class      LmsClass      @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+}
+
+enum LmsSubmissionStatus {
+  submitted
+  reviewed
+}
+
+enum AppUserRole {
+  teacher
+  student
+}

@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, ReactNode } from 'react'
-import { UserRole } from './AuthContext'
+import { UserRole } from '../../../shared/contexts/AuthContext'
 
 export interface MeetingParticipant {
   userId: string
@@ -42,9 +42,9 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       }],
       createdAt: Date.now()
     }
-    
+
     setMeetings(prev => new Map(prev).set(code, meeting))
-    
+
     // Store in localStorage
     const meetingsData = JSON.parse(localStorage.getItem('meetings') || '{}')
     meetingsData[code] = meeting
@@ -54,11 +54,11 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   const joinMeeting = (code: string, userId: string, userName: string, role: UserRole): boolean => {
     // Load meeting from localStorage if not in state
     let meeting = meetings.get(code)
-    
+
     if (!meeting) {
       const meetingsData = JSON.parse(localStorage.getItem('meetings') || '{}')
       meeting = meetingsData[code]
-      
+
       // If meeting doesn't exist, create it automatically
       if (!meeting) {
         meeting = {
@@ -96,7 +96,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
 
   const getMeeting = (code: string): Meeting | null => {
     let meeting = meetings.get(code)
-    
+
     if (!meeting) {
       const meetingsData = JSON.parse(localStorage.getItem('meetings') || '{}')
       meeting = meetingsData[code]
@@ -108,7 +108,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   const isTeacher = (code: string, userId: string): boolean => {
     const meeting = getMeeting(code)
     if (!meeting) return false
-    
+
     // Check actual role of the participant, not creator status
     const participant = meeting.participants.find(p => p.userId === userId)
     return participant?.role === 'teacher'
@@ -117,7 +117,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
   const getStudents = (code: string): MeetingParticipant[] => {
     const meeting = getMeeting(code)
     if (!meeting) return []
-    
+
     return meeting.participants.filter(p => p.role === 'student')
   }
 

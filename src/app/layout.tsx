@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { AuthProvider } from '../contexts/AuthContext'
-import { MeetingProvider } from '../contexts/MeetingContext'
+import { AuthProvider } from '../shared/contexts/AuthContext'
+import { MeetingProvider } from '../features/edu-meet/contexts/MeetingContext'
 
 export const metadata: Metadata = {
   title: 'Edu Insight Meet',

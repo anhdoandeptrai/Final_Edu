@@ -17,19 +17,19 @@ import dynamic from 'next/dynamic'
 
 // Dynamic import AI component
 const AIBehaviorDetector = dynamic(
-  () => import('../../../../components/AIBehaviorDetector'),
+  () => import('../../../../features/edu-meet/components/AIBehaviorDetector'),
   { ssr: false }
 )
 
 // Dynamic import for BehaviorHistoryPanel
 const BehaviorHistoryPanel = dynamic(
-  () => import('../../../../components/BehaviorHistoryPanel'),
+  () => import('../../../../features/edu-meet/components/BehaviorHistoryPanel'),
   { ssr: false }
 )
 
 // Dynamic import for StudentsBehaviorPanel
 const StudentsBehaviorPanel = dynamic(
-  () => import('../../../../components/StudentsBehaviorPanel'),
+  () => import('../../../../features/edu-meet/components/StudentsBehaviorPanel'),
   { ssr: false }
 )
 
@@ -45,18 +45,18 @@ interface MeetSettings {
 function AIDetectionManager({ settings }: { settings: MeetSettings }) {
   const participants = useParticipants()
   const { localParticipant } = useLocalParticipant()
-  
+
   if (settings.userRole === 'student') {
     // Students detect their own behavior
     return (
-      <AIBehaviorDetector 
-        enabled={true} 
+      <AIBehaviorDetector
+        enabled={true}
         userId={settings.userId}
         userName={settings.userName}
       />
     )
   }
-  
+
   if (settings.userRole === 'teacher') {
     // Teachers detect all remote participants (students)
     return (
@@ -64,7 +64,7 @@ function AIDetectionManager({ settings }: { settings: MeetSettings }) {
         {participants.map((participant) => {
           // Don't detect self
           if (participant.sid === localParticipant?.sid) return null
-          
+
           return (
             <AIBehaviorDetector
               key={participant.sid}
@@ -78,7 +78,7 @@ function AIDetectionManager({ settings }: { settings: MeetSettings }) {
       </>
     )
   }
-  
+
   return null
 }
 
@@ -90,13 +90,13 @@ function VideoGrid() {
 
   const videoTracks = tracks.filter(t => t.source === Track.Source.Camera)
   const screenTracks = tracks.filter(t => t.source === Track.Source.ScreenShare)
-  
+
   // Check if local participant has video track
   const localHasVideo = videoTracks.some(t => t.participant.sid === localParticipant?.sid)
 
   // Get participants without video (excluding local participant to avoid duplication)
   const participantsWithVideo = new Set(videoTracks.map(t => t.participant.sid))
-  const participantsWithoutVideo = participants.filter(p => 
+  const participantsWithoutVideo = participants.filter(p =>
     !participantsWithVideo.has(p.sid) && p.sid !== localParticipant?.sid
   )
 
@@ -107,7 +107,7 @@ function VideoGrid() {
   const getAvatarColor = (name: string) => {
     // Generate consistent color based on name
     const colors = [
-      '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', 
+      '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b',
       '#10b981', '#06b6d4', '#6366f1', '#8b5cf6'
     ]
     const index = name ? name.charCodeAt(0) % colors.length : 0
@@ -182,122 +182,63 @@ function VideoGrid() {
         height: hasScreenShare ? '35vh' : 'auto',
         overflowY: hasScreenShare ? 'auto' : 'visible'
       }}>
-      {/* Show local participant placeholder if no video */}
-      {localParticipant && !localHasVideo && (
-        <div
-          style={{
-            position: 'relative',
-            background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
-            borderRadius: '20px',
-            overflow: 'hidden',
-            border: '3px solid var(--accent-primary)',
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '300px'
-          }}
-        >
-          <div style={{
-            width: '100px',
-            height: '100px',
-            borderRadius: '50%',
-            background: `linear-gradient(135deg, ${getAvatarColor(localParticipant.name || localParticipant.identity)} 0%, ${getAvatarColor(localParticipant.name || localParticipant.identity)}dd 100%)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2.5rem',
-            fontWeight: 600,
-            color: '#fff',
-            marginBottom: '1rem',
-            boxShadow: 'var(--shadow-lg)'
-          }}>
-            {getInitials(localParticipant.name || localParticipant.identity)}
-          </div>
-          <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
-            {localParticipant.name || localParticipant.identity}
-          </p>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            📷 Camera đang tắt
-          </p>
-          
-          {/* Name Badge */}
-          <div style={{
-            position: 'absolute',
-            bottom: '1rem',
-            left: '1rem',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            padding: '0.5rem 1rem',
-            borderRadius: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            boxShadow: 'var(--shadow-md)'
-          }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-              {localParticipant.name || localParticipant.identity}
-            </span>
-            <span style={{
-              fontSize: '0.625rem',
-              background: 'var(--accent-primary)',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              color: '#fff'
-            }}>
-              Bạn
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Video tracks */}
-      {videoTracks.map((track) => (
-        <div
-          key={track.participant.sid}
-          data-lk-participant-sid={track.participant.sid}
-          data-lk-participant-identity={track.participant.identity}
-          style={{
-            position: 'relative',
-            background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
-            borderRadius: '20px',
-            overflow: 'hidden',
-            border: track.participant.sid === localParticipant?.sid
-              ? '3px solid var(--accent-primary)'
-              : '1px solid var(--border-color)',
-            boxShadow: 'var(--shadow-lg)',
-            minHeight: '300px'
-          }}
-        >
-          <VideoTrack
-            trackRef={track}
+        {/* Show local participant placeholder if no video */}
+        {localParticipant && !localHasVideo && (
+          <div
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transform: track.participant.sid === localParticipant?.sid ? 'scaleX(-1)' : 'none'
+              position: 'relative',
+              background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              border: '3px solid var(--accent-primary)',
+              boxShadow: 'var(--shadow-lg)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '300px'
             }}
-          />
+          >
+            <div style={{
+              width: '100px',
+              height: '100px',
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, ${getAvatarColor(localParticipant.name || localParticipant.identity)} 0%, ${getAvatarColor(localParticipant.name || localParticipant.identity)}dd 100%)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '2.5rem',
+              fontWeight: 600,
+              color: '#fff',
+              marginBottom: '1rem',
+              boxShadow: 'var(--shadow-lg)'
+            }}>
+              {getInitials(localParticipant.name || localParticipant.identity)}
+            </div>
+            <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
+              {localParticipant.name || localParticipant.identity}
+            </p>
+            <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+              📷 Camera đang tắt
+            </p>
 
-          {/* Participant Name Badge */}
-          <div style={{
-            position: 'absolute',
-            bottom: '1rem',
-            left: '1rem',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            padding: '0.5rem 1rem',
-            borderRadius: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            boxShadow: 'var(--shadow-md)'
-          }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-              {track.participant.name || track.participant.identity}
-            </span>
-            {track.participant.sid === localParticipant?.sid && (
+            {/* Name Badge */}
+            <div style={{
+              position: 'absolute',
+              bottom: '1rem',
+              left: '1rem',
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              padding: '0.5rem 1rem',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              boxShadow: 'var(--shadow-md)'
+            }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                {localParticipant.name || localParticipant.identity}
+              </span>
               <span style={{
                 fontSize: '0.625rem',
                 background: 'var(--accent-primary)',
@@ -307,106 +248,165 @@ function VideoGrid() {
               }}>
                 Bạn
               </span>
-            )}
+            </div>
           </div>
+        )}
 
-          {/* Connection Quality Indicator */}
+        {/* Video tracks */}
+        {videoTracks.map((track) => (
+          <div
+            key={track.participant.sid}
+            data-lk-participant-sid={track.participant.sid}
+            data-lk-participant-identity={track.participant.identity}
+            style={{
+              position: 'relative',
+              background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              border: track.participant.sid === localParticipant?.sid
+                ? '3px solid var(--accent-primary)'
+                : '1px solid var(--border-color)',
+              boxShadow: 'var(--shadow-lg)',
+              minHeight: '300px'
+            }}
+          >
+            <VideoTrack
+              trackRef={track}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transform: track.participant.sid === localParticipant?.sid ? 'scaleX(-1)' : 'none'
+              }}
+            />
+
+            {/* Participant Name Badge */}
+            <div style={{
+              position: 'absolute',
+              bottom: '1rem',
+              left: '1rem',
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              padding: '0.5rem 1rem',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              boxShadow: 'var(--shadow-md)'
+            }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                {track.participant.name || track.participant.identity}
+              </span>
+              {track.participant.sid === localParticipant?.sid && (
+                <span style={{
+                  fontSize: '0.625rem',
+                  background: 'var(--accent-primary)',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  color: '#fff'
+                }}>
+                  Bạn
+                </span>
+              )}
+            </div>
+
+            {/* Connection Quality Indicator */}
+            <div style={{
+              position: 'absolute',
+              top: '1rem',
+              right: '1rem',
+              background: 'rgba(255, 255, 255, 0.9)',
+              padding: '0.25rem 0.5rem',
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              color: 'var(--success)',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              ● HD
+            </div>
+          </div>
+        ))}
+
+        {/* Remote participants without video - show avatars */}
+        {participantsWithoutVideo.map((participant) => (
+          <div
+            key={participant.sid}
+            style={{
+              position: 'relative',
+              background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--shadow-lg)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '300px'
+            }}
+          >
+            <div style={{
+              width: '100px',
+              height: '100px',
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, ${getAvatarColor(participant.name || participant.identity)} 0%, ${getAvatarColor(participant.name || participant.identity)}dd 100%)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '2.5rem',
+              fontWeight: 600,
+              color: '#fff',
+              marginBottom: '1rem',
+              boxShadow: 'var(--shadow-lg)'
+            }}>
+              {getInitials(participant.name || participant.identity)}
+            </div>
+            <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
+              {participant.name || participant.identity}
+            </p>
+            <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+              📷 Camera đang tắt
+            </p>
+
+            {/* Name Badge */}
+            <div style={{
+              position: 'absolute',
+              bottom: '1rem',
+              left: '1rem',
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              padding: '0.5rem 1rem',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              boxShadow: 'var(--shadow-md)'
+            }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                {participant.name || participant.identity}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        {/* Empty state when waiting for others */}
+        {participants.length === 1 && (
           <div style={{
-            position: 'absolute',
-            top: '1rem',
-            right: '1rem',
-            background: 'rgba(255, 255, 255, 0.9)',
-            padding: '0.25rem 0.5rem',
-            borderRadius: '6px',
-            fontSize: '0.75rem',
-            color: 'var(--success)',
-            boxShadow: 'var(--shadow-sm)'
-          }}>
-            ● HD
-          </div>
-        </div>
-      ))}
-
-      {/* Remote participants without video - show avatars */}
-      {participantsWithoutVideo.map((participant) => (
-        <div
-          key={participant.sid}
-          style={{
-            position: 'relative',
-            background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
             borderRadius: '20px',
-            overflow: 'hidden',
-            border: '1px solid var(--border-color)',
-            boxShadow: 'var(--shadow-lg)',
+            border: '2px dashed var(--border-color)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: '1rem',
             minHeight: '300px'
-          }}
-        >
-          <div style={{
-            width: '100px',
-            height: '100px',
-            borderRadius: '50%',
-            background: `linear-gradient(135deg, ${getAvatarColor(participant.name || participant.identity)} 0%, ${getAvatarColor(participant.name || participant.identity)}dd 100%)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2.5rem',
-            fontWeight: 600,
-            color: '#fff',
-            marginBottom: '1rem',
-            boxShadow: 'var(--shadow-lg)'
           }}>
-            {getInitials(participant.name || participant.identity)}
+            <div style={{ fontSize: '4rem' }}>👥</div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Đang chờ người khác tham gia...</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Chia sẻ mã phòng để mời</p>
           </div>
-          <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
-            {participant.name || participant.identity}
-          </p>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            📷 Camera đang tắt
-          </p>
-          
-          {/* Name Badge */}
-          <div style={{
-            position: 'absolute',
-            bottom: '1rem',
-            left: '1rem',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            padding: '0.5rem 1rem',
-            borderRadius: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            boxShadow: 'var(--shadow-md)'
-          }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-              {participant.name || participant.identity}
-            </span>
-          </div>
-        </div>
-      ))}
-
-      {/* Empty state when waiting for others */}
-      {participants.length === 1 && (
-        <div style={{
-          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          borderRadius: '20px',
-          border: '2px dashed var(--border-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '1rem',
-          minHeight: '300px'
-        }}>
-          <div style={{ fontSize: '4rem' }}>👥</div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Đang chờ người khác tham gia...</p>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Chia sẻ mã phòng để mời</p>
-        </div>
-      )}
+        )}
       </div>
     </div>
   )
@@ -427,7 +427,7 @@ function ControlBar({ roomCode, onDisconnect }: { roomCode: string; onDisconnect
   const handleDisconnect = async () => {
     if (isDisconnecting) return
     setIsDisconnecting(true)
-    
+
     try {
       // Stop all local tracks first
       const localParticipant = room.localParticipant
@@ -439,7 +439,7 @@ function ControlBar({ roomCode, onDisconnect }: { roomCode: string; onDisconnect
           }
         })
       }
-      
+
       // Disconnect from room
       await room.disconnect()
       onDisconnect()
@@ -551,7 +551,7 @@ function ControlBar({ roomCode, onDisconnect }: { roomCode: string; onDisconnect
           height: '56px',
           borderRadius: '50%',
           border: 'none',
-          background: isDisconnecting 
+          background: isDisconnecting
             ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
             : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
           cursor: isDisconnecting ? 'not-allowed' : 'pointer',
@@ -575,10 +575,10 @@ function ControlBar({ roomCode, onDisconnect }: { roomCode: string; onDisconnect
 function StudentsBehaviorPanelWrapper() {
   const participants = useParticipants()
   const { localParticipant } = useLocalParticipant()
-  
+
   // Filter out local participant (teacher)
   const remoteParticipants = participants.filter(p => p.sid !== localParticipant?.sid)
-  
+
   return <StudentsBehaviorPanel participants={remoteParticipants} />
 }
 
@@ -812,7 +812,7 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
 
       {/* AI Detection Manager - Detects behavior for students or all participants for teachers */}
       <AIDetectionManager settings={settings} />
-      
+
       {/* Students Behavior Panel - Only for teachers */}
       {settings.userRole === 'teacher' && <StudentsBehaviorPanelWrapper />}
 

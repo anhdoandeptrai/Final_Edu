@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import DashboardLayout from '../../components/DashboardLayout'
+import DashboardLayout from '../../shared/components/DashboardLayout'
 
 export default function SettingsPage() {
     const [aiEnabled, setAiEnabled] = useState(true)

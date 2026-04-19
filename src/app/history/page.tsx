@@ -1,7 +1,7 @@
 'use client'
 
-import DashboardLayout from '../../components/DashboardLayout'
-import BehaviorHistoryPanel from '../../components/BehaviorHistoryPanel'
+import DashboardLayout from '../../shared/components/DashboardLayout'
+import BehaviorHistoryPanel from '../../features/edu-meet/components/BehaviorHistoryPanel'
 
 export default function HistoryPage() {
     return (

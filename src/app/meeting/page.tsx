@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { nanoid } from 'nanoid'
-import DashboardLayout from '../../components/DashboardLayout'
+import DashboardLayout from '../../shared/components/DashboardLayout'
 
 export default function MeetingPage() {
     const router = useRouter()

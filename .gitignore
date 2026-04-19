@@ -1,5 +1,6 @@
 node_modules
 .next
+.env
 .env.local
 .env*.local
 *.log
@@ -7,3 +8,5 @@ node_modules
 .vercel
 std_behav_update_new/
 .git-rewrite/
+
+/src/generated/prisma

@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth, UserRole } from '../../contexts/AuthContext'
+import { useAuth, UserRole } from '../../shared/contexts/AuthContext'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -53,10 +53,10 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'center',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       padding: '2rem'
@@ -151,7 +151,7 @@ export default function AuthPage() {
                 Vai trò
               </label>
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <label style={{ 
+                <label style={{
                   flex: 1,
                   display: 'flex',
                   alignItems: 'center',
@@ -173,7 +173,7 @@ export default function AuthPage() {
                   />
                   <span style={{ fontWeight: '500' }}>👨‍🎓 Học sinh</span>
                 </label>
-                <label style={{ 
+                <label style={{
                   flex: 1,
                   display: 'flex',
                   alignItems: 'center',
@@ -200,7 +200,7 @@ export default function AuthPage() {
           )}
 
           {error && (
-            <div style={{ 
+            <div style={{
               padding: '0.75rem',
               background: '#fee',
               border: '1px solid #fcc',
