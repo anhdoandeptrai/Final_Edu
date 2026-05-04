@@ -71,6 +71,53 @@ npm i -g vercel
 vercel
 ```
 
+## Backend Production on Vercel
+
+To run backend features (auth + LMS) on Vercel, you must configure PostgreSQL and env vars.
+
+### 1. Required environment variables (Production)
+
+- `DATABASE_URL` (PostgreSQL cloud connection string)
+- `LIVEKIT_API_KEY`
+- `LIVEKIT_API_SECRET`
+- `NEXT_PUBLIC_LIVEKIT_URL`
+- `SKIP_DB_MIGRATE` (optional: set `1` if you run migrations manually outside Vercel build)
+
+### 2. Set env variables by CLI (optional)
+
+```bash
+vercel env add DATABASE_URL production
+vercel env add LIVEKIT_API_KEY production
+vercel env add LIVEKIT_API_SECRET production
+vercel env add NEXT_PUBLIC_LIVEKIT_URL production
+```
+
+### 3. Deploy
+
+```bash
+vercel --prod
+```
+
+Build now runs `prisma generate` + optional `prisma migrate deploy` automatically.
+If you prefer a separate migration pipeline, set `SKIP_DB_MIGRATE=1` in Vercel env.
+
+### 4. Verify backend health
+
+Open:
+
+- `/api/health` should return `ok: true`, `database: connected`, and `env.configured: true`
+- `/api/auth/me` should return `401` when not logged in (expected)
+
+## Public Rollout Checklist
+
+1. PostgreSQL must allow incoming connections from Vercel (or use provider integration).
+2. Add all required env vars to `Production` scope in Vercel project settings.
+3. Deploy with `vercel --prod`.
+4. Verify `/api/health` is green before sharing public URL.
+5. Test auth flow: register -> login -> reload page -> logout.
+6. Test LMS flow with 2 accounts: teacher creates class, student joins with code.
+7. Test meeting flow: create room and join from another network/device.
+
 ## Test checklist
 
 1. Máy 1 (laptop WiFi): Mở URL → Tạo cuộc họp → Copy mã phòng

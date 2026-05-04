@@ -70,9 +70,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
   }
 
+  if (assignment.dueAt.getTime() <= Date.now()) {
+    return NextResponse.json({ error: 'Deadline passed' }, { status: 403 })
+  }
+
   const isEnrolled = await isStudentInClass(user.id, assignment.classId)
   if (!isEnrolled) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const currentSubmission = await getSubmissionForStudent(assignmentId, user.id)
+  if (currentSubmission?.status === 'reviewed') {
+    return NextResponse.json({ error: 'Submission already graded and locked' }, { status: 403 })
   }
 
   const submission = await submitAssignment({

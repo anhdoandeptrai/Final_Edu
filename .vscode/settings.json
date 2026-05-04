@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^lsof -i :3000 -sTCP:LISTEN -Pn -t \\|\\| true$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

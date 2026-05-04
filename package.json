@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "prisma generate && next build --webpack",
+    "build": "prisma generate && prisma migrate deploy && next build --webpack",
+    "build:vercel": "prisma generate && ( [ \"$SKIP_DB_MIGRATE\" = \"1\" ] || prisma migrate deploy ) && next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",

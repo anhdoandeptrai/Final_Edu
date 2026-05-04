@@ -1,5 +1,8 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../../lib/prisma'
 import { LmsAssignment, LmsClass, LmsLesson, LmsRole, LmsSubmission } from '../types'
+
+const JOIN_CODE_MAX_RETRIES = 5
 
 function createJoinCode(): string {
   return Math.random().toString(36).slice(2, 8).toUpperCase()
@@ -125,18 +128,29 @@ export async function createClass(payload: {
   teacherId: string
   teacherName: string
 }): Promise<LmsClass> {
-  const created = await prisma.lmsClass.create({
-    data: {
-      name: payload.name,
-      description: payload.description,
-      teacherId: payload.teacherId,
-      teacherName: payload.teacherName,
-      joinCode: createJoinCode(),
-    },
-    include: { enrollments: { select: { studentId: true } } },
-  })
+  for (let attempt = 0; attempt < JOIN_CODE_MAX_RETRIES; attempt += 1) {
+    try {
+      const created = await prisma.lmsClass.create({
+        data: {
+          name: payload.name,
+          description: payload.description,
+          teacherId: payload.teacherId,
+          teacherName: payload.teacherName,
+          joinCode: createJoinCode(),
+        },
+        include: { enrollments: { select: { studentId: true } } },
+      })
 
-  return mapClass(created)
+      return mapClass(created)
+    } catch (error) {
+      // Retry if joinCode hits the unique constraint; throw for other errors.
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {
+        throw error
+      }
+    }
+  }
+
+  throw new Error('Failed to generate a unique join code. Please try again.')
 }
 
 export async function joinClassByCode(joinCode: string, studentId: string): Promise<{ ok: boolean; message: string }> {
@@ -344,6 +358,7 @@ export async function hasClassAccess(userId: string, role: LmsRole, classId: str
 export async function getAssignmentAccessInfo(assignmentId: string): Promise<{
   id: string
   classId: string
+  dueAt: Date
   maxScore: number
 } | null> {
   return prisma.lmsAssignment.findUnique({
@@ -351,6 +366,7 @@ export async function getAssignmentAccessInfo(assignmentId: string): Promise<{
     select: {
       id: true,
       classId: true,
+      dueAt: true,
       maxScore: true,
     },
   })

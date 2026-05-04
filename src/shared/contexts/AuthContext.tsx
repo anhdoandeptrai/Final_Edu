@@ -29,8 +29,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const response = await fetch('/api/auth/me', { cache: 'no-store' })
         if (!response.ok) {
-          setUser(null)
-          localStorage.removeItem('user')
+          const stored = localStorage.getItem('user')
+          if (stored) {
+            try {
+              setUser(JSON.parse(stored))
+            } catch {
+              setUser(null)
+              localStorage.removeItem('user')
+            }
+          } else {
+            setUser(null)
+          }
           return
         }
 

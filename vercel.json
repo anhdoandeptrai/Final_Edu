@@ -1,7 +1,6 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:vercel",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./src ./public"
+  "framework": "nextjs"
 }

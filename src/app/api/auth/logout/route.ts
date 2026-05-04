@@ -4,9 +4,14 @@ import { clearSessionCookie, deleteSessionFromRequest } from '../../../../featur
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
-  await deleteSessionFromRequest(req)
+  try {
+    await deleteSessionFromRequest(req)
 
-  const response = NextResponse.json({ ok: true })
-  clearSessionCookie(response)
-  return response
+    const response = NextResponse.json({ ok: true })
+    clearSessionCookie(response)
+    return response
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }
