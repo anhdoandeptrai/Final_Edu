@@ -112,7 +112,8 @@
   grid-template-columns: repeat(auto-fit, minmax(var(--tile-min-width), 1fr));
   gap: 12px;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 260px);
   padding-right: 4px;
 }
 
@@ -123,7 +124,9 @@
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-md);
   overflow: hidden;
-  min-height: 160px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
 }
 
 .participantTileLocal {

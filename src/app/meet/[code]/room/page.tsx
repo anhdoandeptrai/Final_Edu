@@ -20,6 +20,7 @@ import RightSidebar from '../../../../features/edu-meet/components/meeting/Right
 import AIBehaviorPanel from '../../../../features/edu-meet/components/meeting/AIBehaviorPanel'
 import ParticipantSidebar from '../../../../features/edu-meet/components/meeting/ParticipantSidebar'
 import AIAnalyticsPanel, { CameraWarning } from '../../../../features/edu-meet/components/meeting/AIAnalyticsPanel'
+import { getStudentBehaviors, subscribeToStudentBehaviors, type StudentBehavior } from '../../../../features/edu-meet/components/StudentsBehaviorPanel'
 import useBreakpoints from '../../../../features/edu-meet/hooks/useBreakpoints'
 import styles from '../../../../features/edu-meet/components/meeting/MeetingRoom.module.css'
 
@@ -351,6 +352,15 @@ function RoomStage({
   const [chatDraft, setChatDraft] = useState('')
   const [selectedStudentId, setSelectedStudentId] = useState<string>('')
   const [followAll, setFollowAll] = useState(true)
+  const [studentBehaviors, setStudentBehaviors] = useState<StudentBehavior[]>([])
+
+  useEffect(() => {
+    setStudentBehaviors([...getStudentBehaviors()])
+    const unsubscribe = subscribeToStudentBehaviors(() => {
+      setStudentBehaviors([...getStudentBehaviors()])
+    })
+    return unsubscribe
+  }, [])
 
   const orderedParticipants = useMemo(() => {
     const local = localParticipant ? [localParticipant] : []
@@ -395,6 +405,47 @@ function RoomStage({
     const selectedName = selectedStudent.participant.name || selectedStudent.participant.identity
     return cameraWarnings.filter((warning) => warning.name === selectedName)
   }, [cameraWarnings, selectedStudent])
+
+  const latestBehaviorsByStudent = useMemo(() => {
+    const map = new Map<string, StudentBehavior>()
+    studentBehaviors.forEach((behavior) => {
+      if (!map.has(behavior.userId)) {
+        map.set(behavior.userId, behavior)
+      }
+    })
+    return map
+  }, [studentBehaviors])
+
+  const studentOverview = useMemo(() => {
+    const entries = studentOptions
+
+    const cameraOn = entries.filter((entry) => entry.hasVideo).length
+    const cameraOff = entries.filter((entry) => !entry.hasVideo).length
+    const focused = Array.from(latestBehaviorsByStudent.values()).filter((behavior) =>
+      ['Tập trung', 'Đang lắng nghe', 'Giơ tay', 'Gật đầu'].includes(behavior.label)
+    ).length
+    const distracted = Array.from(latestBehaviorsByStudent.values()).filter((behavior) =>
+      ['Mất tập trung', 'Cúi đầu', 'Nghiêng đầu', 'Lắc đầu'].includes(behavior.label)
+    ).length
+    const raisedHand = Array.from(latestBehaviorsByStudent.values()).filter((behavior) =>
+      behavior.label === 'Giơ tay'
+    ).length
+
+    return {
+      cameraOn,
+      cameraOff,
+      focused,
+      distracted,
+      raisedHand,
+      total: entries.length,
+    }
+  }, [studentOptions, latestBehaviorsByStudent])
+
+  const selectedStudentHistory = useMemo(() => {
+    if (!selectedStudent) return []
+    return studentBehaviors.filter((behavior) => behavior.userId === selectedStudent.participant.sid)
+      .sort((a, b) => b.timestamp - a.timestamp)
+  }, [selectedStudent, studentBehaviors])
 
   const hasScreenShare = screenTracks.length > 0
   const maxMain = hasScreenShare ? 6 : 8
@@ -557,8 +608,8 @@ function RoomStage({
       <div className={styles.followCard}>
         <div className={styles.followHeader}>
           <div>
-            <div className={styles.followTitle}>Chọn chế độ theo dõi</div>
-            <div className={styles.followSubtitle}>Dễ dàng chọn toàn bộ hoặc cụ thể từng học sinh để xem phân tích chi tiết.</div>
+            <div className={styles.followTitle}>Theo dõi học sinh</div>
+            <div className={styles.followSubtitle}>Tóm tắt ngay trạng thái camera và hành vi của học sinh trong lớp.</div>
           </div>
           <div className={styles.followModeBadge}>
             {followAll ? 'Toàn bộ' : 'Cụ thể'}
@@ -571,49 +622,74 @@ function RoomStage({
             className={`${styles.followModeButton} ${followAll ? styles.activeFollowButton : ''}`}
             onClick={() => setFollowAll(true)}
           >
-            Theo dõi toàn bộ
+            Toàn bộ
           </button>
           <button
             type="button"
             className={`${styles.followModeButton} ${!followAll ? styles.activeFollowButton : ''}`}
             onClick={() => setFollowAll(false)}
           >
-            Theo dõi cụ thể
+            Cụ thể
           </button>
-        </div>
-      </div>
-
-      <div className={styles.followCard}>
-        <div className={styles.followSummary}>
-          <div>
-            <div className={styles.followSummaryLabel}>Học sinh đang chọn</div>
-            <div className={styles.followStudentName}>
-              {selectedStudent ? selectedStudent.participant.name || selectedStudent.participant.identity : 'Chưa có học sinh'}
-            </div>
-          </div>
-          <div className={styles.followStatusBadge} style={{ background: selectedStudent?.hasVideo ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)', color: selectedStudent?.hasVideo ? '#10b981' : '#ef4444' }}>
-            {selectedStudent ? (selectedStudent.hasVideo ? 'Camera bật' : 'Camera tắt') : 'Không có dữ liệu'}
-          </div>
         </div>
 
         <div className={styles.followStats}>
           <div className={styles.followStatCard}>
-            <div className={styles.followStatValue}>{participantEntries.length - 1}</div>
-            <div className={styles.followStatLabel}>Số học sinh</div>
+            <div className={styles.followStatValue}>{studentOverview.total}</div>
+            <div className={styles.followStatLabel}>Tổng học sinh</div>
           </div>
           <div className={styles.followStatCard}>
-            <div className={styles.followStatValue}>{selectedStudent ? (selectedStudent.hasVideo ? 'Bật' : 'Tắt') : '-'}</div>
-            <div className={styles.followStatLabel}>Trạng thái camera</div>
+            <div className={styles.followStatValue}>{studentOverview.cameraOn}</div>
+            <div className={styles.followStatLabel}>Camera bật</div>
           </div>
           <div className={styles.followStatCard}>
-            <div className={styles.followStatValue}>{selectedStudentWarnings.length}</div>
-            <div className={styles.followStatLabel}>Cảnh báo</div>
+            <div className={styles.followStatValue}>{studentOverview.cameraOff}</div>
+            <div className={styles.followStatLabel}>Camera tắt</div>
+          </div>
+          <div className={styles.followStatCard}>
+            <div className={styles.followStatValue}>{studentOverview.focused}</div>
+            <div className={styles.followStatLabel}>Tập trung</div>
+          </div>
+          <div className={styles.followStatCard}>
+            <div className={styles.followStatValue}>{studentOverview.distracted}</div>
+            <div className={styles.followStatLabel}>Mất tập trung</div>
+          </div>
+          <div className={styles.followStatCard}>
+            <div className={styles.followStatValue}>{studentOverview.raisedHand}</div>
+            <div className={styles.followStatLabel}>Giơ tay</div>
           </div>
         </div>
       </div>
 
       {!followAll && (
         <div className={styles.followCard}>
+          <div className={styles.followSummary}>
+            <div>
+              <div className={styles.followSummaryLabel}>Học sinh đang chọn</div>
+              <div className={styles.followStudentName}>
+                {selectedStudent ? selectedStudent.participant.name || selectedStudent.participant.identity : 'Chưa có học sinh'}
+              </div>
+            </div>
+            <div className={styles.followStatusBadge} style={{ background: selectedStudent?.hasVideo ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)', color: selectedStudent?.hasVideo ? '#10b981' : '#ef4444' }}>
+              {selectedStudent ? (selectedStudent.hasVideo ? 'Camera bật' : 'Camera tắt') : 'Không có dữ liệu'}
+            </div>
+          </div>
+
+          <div className={styles.followStats}>
+            <div className={styles.followStatCard}>
+              <div className={styles.followStatValue}>{selectedStudent ? (selectedStudent.hasVideo ? 'Bật' : 'Tắt') : '-'}</div>
+              <div className={styles.followStatLabel}>Camera hiện tại</div>
+            </div>
+            <div className={styles.followStatCard}>
+              <div className={styles.followStatValue}>{selectedStudentWarnings.length}</div>
+              <div className={styles.followStatLabel}>Cảnh báo</div>
+            </div>
+            <div className={styles.followStatCard}>
+              <div className={styles.followStatValue}>{selectedStudentHistory.length}</div>
+              <div className={styles.followStatLabel}>Lịch sử sự kiện</div>
+            </div>
+          </div>
+
           <div className={styles.followStudentSelectLabel}>Chọn học sinh</div>
           <div className={styles.followStudentList}>
             {studentOptions.map((entry) => {
@@ -637,28 +713,46 @@ function RoomStage({
               )
             })}
           </div>
-        </div>
-      )}
 
-      {selectedStudent && (
-        <div className={styles.followCard}>
           <div className={styles.followCardTitle}>Phân tích chi tiết</div>
           <div className={styles.followCardText}>
-            {followAll
-              ? 'Đang hiển thị phân tích nhanh cho toàn bộ học sinh. Chuyển sang chế độ cụ thể để xem chi tiết từng cá nhân.'
-              : 'Đang hiển thị phân tích chi tiết cho học sinh đã chọn. Các cảnh báo camera được cập nhật theo thời gian thực.'}
+            Hệ thống sẽ ghi lại mọi sự kiện hành vi của học sinh. Chọn một học sinh để xem lịch sử chi tiết.
           </div>
-          {selectedStudentWarnings.length > 0 ? (
-            <div className={styles.followWarningList}>
-              {selectedStudentWarnings.map((warning) => (
-                <div key={warning.id} className={styles.followWarningItem}>
-                  <div className={styles.followWarningHeading}>{warning.status}</div>
-                  <div>{new Date(warning.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+
+          {selectedStudent && (
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {selectedStudentWarnings.length > 0 ? (
+                <div className={styles.followWarningList}>
+                  {selectedStudentWarnings.map((warning) => (
+                    <div key={warning.id} className={styles.followWarningItem}>
+                      <div className={styles.followWarningHeading}>{warning.status}</div>
+                      <div>{new Date(warning.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className={styles.followCardText}>Không có cảnh báo camera mới với học sinh này.</div>
+              )}
+
+              <div style={{ maxHeight: '260px', overflowY: 'auto', borderRadius: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '10px' }}>
+                {selectedStudentHistory.length === 0 ? (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                    Chưa có sự kiện hành vi nào được ghi nhận cho học sinh này.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {selectedStudentHistory.map((history) => (
+                      <div key={`${history.userId}-${history.timestamp}`} style={{ padding: '10px', borderRadius: '14px', background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(148,163,184,0.18)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 700 }}>{history.emoji} {history.label}</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(history.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className={styles.followCardText}>Không có cảnh báo mới cho học sinh này.</div>
           )}
         </div>
       )}
