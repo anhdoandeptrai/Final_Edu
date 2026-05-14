@@ -1195,24 +1195,6 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
         )
     }
 
-    if (!activeClass && classes.length === 0) {
-        return (
-            <div className="container lms-shell">
-                <header className="page-hero card">
-                    <div>
-                        <p className="eyebrow">LMS Mini</p>
-                        <h1 className="title" style={{ textAlign: 'left', marginBottom: '0.5rem' }}>Quản lý lớp học theo từng khu vực</h1>
-                        <p className="subtitle" style={{ textAlign: 'left', marginBottom: 0 }}>Tạo lớp, thêm bài học, tạo bài tập và chấm bài trong một luồng rõ ràng.</p>
-                    </div>
-                </header>
-                <div className="card empty-state" style={{ marginTop: '1rem' }}>
-                    <p>Chưa có lớp học để hiển thị.</p>
-                    <p className="panel-subtitle">Tạo lớp hoặc tham gia bằng mã lớp ở khối bên trái.</p>
-                </div>
-            </div>
-        )
-    }
-
     return (
         <div className="container lms-shell">
             <header className="page-hero card">
@@ -1252,7 +1234,16 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     <div className={`section-surface ${isSwitching ? 'switching' : ''}`}>
                         {!activeClass ? (
                             <div className="card empty-state">
-                                <p>Chọn lớp học để bắt đầu.</p>
+                                <p>
+                                    {classes.length === 0
+                                        ? 'Chưa có lớp học nào được tham gia.'
+                                        : 'Chọn một lớp học để bắt đầu.'}
+                                </p>
+                                {classes.length === 0 ? (
+                                    <p className="panel-subtitle">
+                                        Dùng khối bên trái để tìm lớp hoặc nhập mã lớp để tham gia.
+                                    </p>
+                                ) : null}
                             </div>
                         ) : (
                             <>
