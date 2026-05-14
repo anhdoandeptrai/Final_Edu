@@ -3,6 +3,7 @@
         "/^lsof -i :3000 -sTCP:LISTEN -Pn -t \\|\\| true$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "brew": true
     }
 }

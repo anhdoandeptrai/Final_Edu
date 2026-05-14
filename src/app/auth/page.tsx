@@ -8,6 +8,7 @@ export default function AuthPage() {
   const router = useRouter()
   const { login, register } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -127,22 +128,43 @@ export default function AuthPage() {
             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#4a5568', marginBottom: '0.5rem' }}>
               Mật khẩu
             </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="••••••••"
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '2px solid #e2e8f0',
-                borderRadius: '0.5rem',
-                fontSize: '1rem',
-                transition: 'all 0.2s'
-              }}
-              required
-              minLength={6}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="••••••••"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 3rem 0.75rem 0.75rem',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '0.5rem',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s'
+                }}
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  border: 'none',
+                  background: 'none',
+                  color: '#667eea',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: 600
+                }}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              >
+                {showPassword ? 'Ẩn' : 'Hiện'}
+              </button>
+            </div>
           </div>
 
           {!isLogin && (

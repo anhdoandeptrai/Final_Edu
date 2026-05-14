@@ -19,50 +19,53 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
   const [error, setError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const lastEmitRef = useRef<number>(0)
+  const lastLabelRef = useRef<string>('')
+  const updateIntervalMs = 2500
 
   const findLocalVideo = useCallback((): HTMLVideoElement | null => {
     // Find the video element - either local or specific participant
     const videos = Array.from(document.querySelectorAll('video'))
     console.log('[AI] Tìm thấy', videos.length, 'video elements', participantSid ? `(tìm participant: ${participantSid})` : '(tìm local)')
-    
+
     for (let i = 0; i < videos.length; i++) {
       const video = videos[i]
-      
+
       // Check if video is ready
       if (!video.srcObject || video.readyState < 2 || video.videoWidth === 0) {
         continue
       }
-      
+
       // If looking for specific participant
       if (participantSid) {
         // Try multiple ways to identify the participant video
-        
+
         // Method 1: Check data attributes on video or parent
-        const container = video.closest('[data-lk-participant-sid]') || 
-                         video.closest('[data-lk-participant]') ||
-                         video.closest('[data-lk-participant-identity]')
-        
+        const container = video.closest('[data-lk-participant-sid]') ||
+          video.closest('[data-lk-participant]') ||
+          video.closest('[data-lk-participant-identity]')
+
         if (container) {
-          const sid = container.getAttribute('data-lk-participant-sid') || 
-                     container.getAttribute('data-lk-participant') ||
-                     container.getAttribute('data-lk-participant-identity')
-          
+          const sid = container.getAttribute('data-lk-participant-sid') ||
+            container.getAttribute('data-lk-participant') ||
+            container.getAttribute('data-lk-participant-identity')
+
           if (sid === participantSid) {
             console.log('[AI] ✅ Tìm thấy video của participant qua data attribute:', participantSid)
             return video
           }
         }
-        
+
         // Method 2: Check if video element itself has data attributes
         const videoSid = video.getAttribute('data-lk-participant-sid') ||
-                        video.getAttribute('data-participant-sid') ||
-                        video.getAttribute('data-participant-identity')
-        
+          video.getAttribute('data-participant-sid') ||
+          video.getAttribute('data-participant-identity')
+
         if (videoSid === participantSid) {
           console.log('[AI] ✅ Tìm thấy video của participant qua video attribute:', participantSid)
           return video
         }
-        
+
         // Method 3: For remote participants, exclude muted videos (local video is usually muted)
         // Remote participants typically have unmuted video elements
         if (!video.muted && i > 0) {
@@ -75,7 +78,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
           console.log('[AI] ✅ Tìm thấy local video (muted):', i)
           return video
         }
-        
+
         // Fallback: first available video
         if (i === 0) {
           console.log('[AI] ✅ Tìm thấy video phù hợp (fallback):', i)
@@ -88,7 +91,6 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
   }, [participantSid])
 
   const runDetection = useCallback(async () => {
-    console.log('[AI] Bắt đầu phát hiện, isAIOn:', isAIOn)
     if (!isAIOn) return
 
     const video = videoRef.current || findLocalVideo()
@@ -98,17 +100,20 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
     }
 
     videoRef.current = video
-    console.log('[AI] ✅ Đang sử dụng video element')
-    
     const result = await aiDetector.detect(video)
     if (!result) {
-      console.log('[AI] ⚠️ Không có kết quả phát hiện')
       return
     }
-    
-    console.log('[AI] ✅ Phát hiện:', result.label, result.emoji)
+
+    const now = Date.now()
+    if (lastLabelRef.current === result.label && now - lastEmitRef.current < updateIntervalMs) {
+      return
+    }
+
+    lastLabelRef.current = result.label
+    lastEmitRef.current = now
     setBehavior(result)
-    
+
     // Add to history panel (student's own view)
     addBehaviorEntry({
       label: result.label,
@@ -131,7 +136,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
 
   useEffect(() => {
     console.log('[AI] useEffect triggered, isAIOn:', isAIOn)
-    
+
     if (!isAIOn) {
       console.log('[AI] AI tắt, dọn dẹp interval')
       if (intervalRef.current) {
@@ -155,7 +160,6 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
           return
         }
 
-        console.log('[AI] ✅ AI detector đã sẵn sàng')
         setIsLoading(false)
 
         let retryCount = 0
@@ -165,7 +169,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
         const waitForVideo = () => {
           console.log(`[AI] Thử tìm video (lần ${retryCount + 1}/${maxRetries})...`)
           const video = findLocalVideo()
-          
+
           if (video) {
             console.log('[AI] ✅ Đã tìm thấy video, bắt đầu detection loop')
             console.log('[AI] Video info:', {
@@ -176,20 +180,17 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
               participantSid
             })
             videoRef.current = video
-            
+
             // Run immediately first time
             runDetection()
-            
-            // Then start detection loop - every 500ms (2 FPS)
+
+            // Then start detection loop - throttled for UI stability
             intervalRef.current = setInterval(() => {
-              console.log('[AI] Chạy detection định kỳ...')
               runDetection()
-            }, 500)
+            }, updateIntervalMs)
           } else {
             retryCount++
             if (retryCount < maxRetries) {
-              console.log('[AI] Chưa tìm thấy video, thử lại sau 1s...')
-              console.log('[AI] Tổng số video elements:', document.querySelectorAll('video').length)
               setTimeout(waitForVideo, 1000)
             } else {
               console.error('[AI] ❌ Không thể tìm thấy video sau', maxRetries, 'lần thử')
@@ -222,7 +223,7 @@ export default function AIBehaviorDetector({ enabled = true, userId, userName, p
         clearInterval(intervalRef.current)
       }
     }
-  }, [isAIOn])
+  }, [isAIOn, findLocalVideo, runDetection])
 
   const toggleAI = () => {
     setIsAIOn(!isAIOn)

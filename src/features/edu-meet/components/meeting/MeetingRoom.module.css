@@ -1,0 +1,464 @@
+.meetingRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: radial-gradient(900px 380px at 5% 8%, rgba(91, 140, 255, 0.08), transparent 40%),
+              linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.meetingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 20px;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.headerBrand {
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.connectionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.connectionDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.meetingContent {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.stageArea {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.screenShare {
+  position: relative;
+  background: #0b1020;
+  border-radius: 18px;
+  border: 2px solid rgba(91, 140, 255, 0.35);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  min-height: 260px;
+}
+
+.screenShareVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.screenShareLabel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.95);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+.participantGrid {
+  --tile-min-width: 220px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--tile-min-width), 1fr));
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.participantTile {
+  position: relative;
+  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  min-height: 160px;
+}
+
+.participantTileLocal {
+  border: 2px solid rgba(91, 140, 255, 0.6);
+}
+
+.participantVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.participantPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: #fff;
+}
+
+.avatarCircle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: var(--shadow-md);
+}
+
+.tileNameBadge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.tileLocalBadge {
+  font-size: 10px;
+  background: var(--accent-primary);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.tileStatus {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--success);
+  box-shadow: var(--shadow-sm);
+}
+
+.controlBar {
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid var(--border-color);
+  backdrop-filter: blur(16px);
+}
+
+.controlButton {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.controlButton:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.controlButtonDanger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  border: none;
+}
+
+.controlRoomCode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--accent-light);
+  border: 1px solid rgba(91, 140, 255, 0.3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.roomCodeText {
+  display: inline;
+}
+
+.sidebarRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 340px;
+  min-width: 280px;
+  max-width: 420px;
+  height: 100%;
+}
+
+.sidebarCollapsed {
+  width: 56px;
+}
+
+.sidebarPanel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.sidebarPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidebarPanelBody {
+  padding: 10px 12px;
+  overflow: auto;
+  min-height: 0;
+  max-height: 1000px;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+}
+
+.sidebarPanelCollapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.sidebarHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebarFloatingToggle {
+  position: fixed;
+  bottom: 92px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  z-index: 30;
+}
+
+.mobileSheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 80vh;
+  border-radius: 20px 20px 0 0;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-lg);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 40;
+}
+
+.mobileSheetHandle {
+  width: 44px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.6);
+  margin: 0 auto;
+}
+
+.panelSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.participantList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participantRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.participantRowName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.participantRowMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.participantStatusBadge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.participantOverflowGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.overflowTile {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid var(--border-color);
+}
+
+.warningPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.warningItem {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+@media (max-width: 1200px) {
+  .participantGrid {
+    --tile-min-width: 190px;
+  }
+}
+
+@media (max-width: 960px) {
+  .meetingContent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebarRoot {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .meetingHeader {
+    padding: 0 12px;
+  }
+  .headerBrand {
+    font-size: 12px;
+  }
+  .meetingContent {
+    padding: 12px;
+  }
+  .participantGrid {
+    --tile-min-width: 160px;
+  }
+  .controlBar {
+    gap: 8px;
+    height: 70px;
+    padding: 8px 10px;
+    flex-wrap: wrap;
+  }
+  .controlRoomCode {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .roomCodeText {
+    display: none;
+  }
+  .controlButton {
+    width: 46px;
+    height: 46px;
+  }
+}

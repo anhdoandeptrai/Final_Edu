@@ -24,6 +24,14 @@ interface Props {
     classId?: string
 }
 
+type FileAttachment = {
+    id: string
+    name: string
+    size: number
+    type: string
+    url: string
+}
+
 type GradingDraft = {
     score: string
     feedback: string
@@ -61,6 +69,7 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
     const [gradingSearch, setGradingSearch] = useState('')
     const [submissionFilter, setSubmissionFilter] = useState<'all' | 'pending' | 'reviewed'>('all')
     const [submissionSearch, setSubmissionSearch] = useState('')
+    const [isSwitching, setIsSwitching] = useState(false)
 
     const [newClassName, setNewClassName] = useState('')
     const [newClassDescription, setNewClassDescription] = useState('')
@@ -70,13 +79,18 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
     const [lessonDescription, setLessonDescription] = useState('')
     const [lessonContent, setLessonContent] = useState('')
     const [lessonResource, setLessonResource] = useState('')
+    const [lessonAttachments, setLessonAttachments] = useState<FileAttachment[]>([])
+    const [lessonAttachmentsById, setLessonAttachmentsById] = useState<Record<string, FileAttachment[]>>({})
 
     const [assignmentTitle, setAssignmentTitle] = useState('')
     const [assignmentInstructions, setAssignmentInstructions] = useState('')
     const [assignmentDueAt, setAssignmentDueAt] = useState('')
     const [assignmentMaxScore, setAssignmentMaxScore] = useState('10')
+    const [assignmentAttachments, setAssignmentAttachments] = useState<FileAttachment[]>([])
+    const [assignmentAttachmentsById, setAssignmentAttachmentsById] = useState<Record<string, FileAttachment[]>>({})
 
     const [studentResponses, setStudentResponses] = useState<Record<string, string>>({})
+    const [submissionAttachments, setSubmissionAttachments] = useState<Record<string, FileAttachment[]>>({})
     const [gradingState, setGradingState] = useState<Record<string, GradingDraft>>({})
 
     const isTeacher = user.role === 'teacher'
@@ -233,6 +247,83 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
         void refreshClassDetails(activeClassId)
     }, [activeClassId])
 
+    useEffect(() => {
+        setIsSwitching(true)
+        const timer = window.setTimeout(() => setIsSwitching(false), 180)
+        return () => window.clearTimeout(timer)
+    }, [section, activeClassId])
+
+    function buildAttachments(files: FileList | null): FileAttachment[] {
+        if (!files || files.length === 0) return []
+        return Array.from(files).map((file) => ({
+            id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            url: URL.createObjectURL(file),
+        }))
+    }
+
+    function revokeAttachments(list: FileAttachment[]): void {
+        list.forEach((item) => URL.revokeObjectURL(item.url))
+    }
+
+    function handleLessonFilesChange(files: FileList | null): void {
+        revokeAttachments(lessonAttachments)
+        setLessonAttachments(buildAttachments(files))
+    }
+
+    function handleAssignmentFilesChange(files: FileList | null): void {
+        revokeAttachments(assignmentAttachments)
+        setAssignmentAttachments(buildAttachments(files))
+    }
+
+    function handleSubmissionFilesChange(assignmentId: string, files: FileList | null): void {
+        setSubmissionAttachments((prev) => {
+            const current = prev[assignmentId] || []
+            revokeAttachments(current)
+            return {
+                ...prev,
+                [assignmentId]: buildAttachments(files),
+            }
+        })
+    }
+
+    function removeAttachment(list: FileAttachment[], id: string): FileAttachment[] {
+        const target = list.find((item) => item.id === id)
+        if (target) {
+            URL.revokeObjectURL(target.url)
+        }
+        return list.filter((item) => item.id !== id)
+    }
+
+    function renderAttachmentList(
+        attachments: FileAttachment[],
+        onRemove?: (id: string) => void
+    ): JSX.Element | null {
+        if (attachments.length === 0) return null
+        return (
+            <div className="attachment-list">
+                {attachments.map((file) => (
+                    <div key={file.id} className="attachment-item">
+                        <div>
+                            <strong>{file.name}</strong>
+                            <p>{(file.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        <div className="attachment-actions">
+                            <a href={file.url} download={file.name}>Tải</a>
+                            {onRemove ? (
+                                <button type="button" onClick={() => onRemove(file.id)}>Xóa</button>
+                            ) : null}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
+    }
+
     function showToast(message: string): void {
         setToast(message)
         window.setTimeout(() => setToast(''), 2500)
@@ -250,6 +341,9 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
         if (preferredId) {
             if (result.some((item) => item.id === preferredId)) {
                 setActiveClassId(preferredId)
+                if (typeof window !== 'undefined') {
+                    window.localStorage.setItem('lms-active-class', preferredId)
+                }
             } else {
                 setActiveClassId('')
             }
@@ -259,6 +353,14 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
 
         if (result.some((item) => item.id === activeClassId)) {
             return
+        }
+
+        if (typeof window !== 'undefined') {
+            const stored = window.localStorage.getItem('lms-active-class')
+            if (stored && result.some((item) => item.id === stored)) {
+                setActiveClassId(stored)
+                return
+            }
         }
 
         setActiveClassId(result[0].id)
@@ -304,7 +406,7 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
             return
         }
 
-        await createLesson({
+        const created = await createLesson({
             classId: activeClassId,
             title: lessonTitle.trim(),
             description: lessonDescription.trim(),
@@ -317,6 +419,13 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
         setLessonDescription('')
         setLessonContent('')
         setLessonResource('')
+        if (lessonAttachments.length > 0) {
+            setLessonAttachmentsById((prev) => ({
+                ...prev,
+                [created.id]: lessonAttachments,
+            }))
+        }
+        setLessonAttachments([])
         setLessons(await listLessonsByClass(activeClassId))
         showToast('Đã thêm bài học')
     }
@@ -327,7 +436,7 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
             return
         }
 
-        await createAssignment({
+        const created = await createAssignment({
             classId: activeClassId,
             title: assignmentTitle.trim(),
             instructions: assignmentInstructions.trim(),
@@ -340,6 +449,13 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
         setAssignmentInstructions('')
         setAssignmentDueAt('')
         setAssignmentMaxScore('10')
+        if (assignmentAttachments.length > 0) {
+            setAssignmentAttachmentsById((prev) => ({
+                ...prev,
+                [created.id]: assignmentAttachments,
+            }))
+        }
+        setAssignmentAttachments([])
 
         const nextAssignments = await listAssignmentsByClass(activeClassId)
         const nextSubmissionMap: Record<string, LmsSubmission[]> = {}
@@ -387,6 +503,9 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
             const nextSubmissions = await listSubmissionsByAssignment(assignment.id)
             setSubmissionsByAssignment((prev) => ({ ...prev, [assignment.id]: nextSubmissions }))
             setStudentResponses((prev) => ({ ...prev, [assignment.id]: content }))
+            if (!submissionAttachments[assignment.id]) {
+                setSubmissionAttachments((prev) => ({ ...prev, [assignment.id]: [] }))
+            }
             showToast(submission ? 'Đã cập nhật bài nộp' : 'Nộp bài thành công')
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Không thể nộp bài'
@@ -452,6 +571,9 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                                         // immediately. When viewing the classes section we
                                         // also navigate to the class detail route.
                                         setActiveClassId(item.id)
+                                        if (typeof window !== 'undefined') {
+                                            window.localStorage.setItem('lms-active-class', item.id)
+                                        }
 
                                         if (section === 'classes') {
                                             router.push(classHref)
@@ -592,6 +714,20 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                                 value={lessonResource}
                                 onChange={(e) => setLessonResource(e.target.value)}
                             />
+                            <div className="file-uploader">
+                                <label className="file-label">
+                                    Đính kèm file bài học
+                                    <input
+                                        type="file"
+                                        multiple
+                                        onChange={(e) => handleLessonFilesChange(e.target.files)}
+                                    />
+                                </label>
+                                <p className="panel-subtitle">File đính kèm đang lưu tạm trên trình duyệt.</p>
+                                {renderAttachmentList(lessonAttachments, (id) =>
+                                    setLessonAttachments((prev) => removeAttachment(prev, id))
+                                )}
+                            </div>
                             <button className="btn btn-primary" onClick={handleCreateLesson}>Lưu bài học</button>
                         </div>
                     ) : (
@@ -616,6 +752,12 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                                     <p className="item-body">{lesson.content}</p>
                                     {lesson.resourceUrl ? (
                                         <a href={lesson.resourceUrl} target="_blank" rel="noreferrer">Tài liệu đính kèm</a>
+                                    ) : null}
+                                    {lessonAttachmentsById[lesson.id]?.length ? (
+                                        <div className="attachment-panel">
+                                            <p className="panel-subtitle">File đính kèm:</p>
+                                            {renderAttachmentList(lessonAttachmentsById[lesson.id])}
+                                        </div>
                                     ) : null}
                                 </article>
                             ))}
@@ -666,6 +808,20 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                                     value={assignmentMaxScore}
                                     onChange={(e) => setAssignmentMaxScore(e.target.value)}
                                 />
+                            </div>
+                            <div className="file-uploader">
+                                <label className="file-label">
+                                    Đính kèm file bài tập
+                                    <input
+                                        type="file"
+                                        multiple
+                                        onChange={(e) => handleAssignmentFilesChange(e.target.files)}
+                                    />
+                                </label>
+                                <p className="panel-subtitle">File đính kèm đang lưu tạm trên trình duyệt.</p>
+                                {renderAttachmentList(assignmentAttachments, (id) =>
+                                    setAssignmentAttachments((prev) => removeAttachment(prev, id))
+                                )}
                             </div>
                             <button className="btn btn-primary" onClick={handleCreateAssignment}>Lưu bài tập</button>
                         </div>
@@ -729,6 +885,12 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                                             {isPastDue ? <span className="lock-pill danger">Đã quá hạn</span> : null}
                                             {mySubmission?.status === 'reviewed' ? <span className="lock-pill success">Đã được chấm</span> : null}
                                         </div>
+                                        {assignmentAttachmentsById[assignment.id]?.length ? (
+                                            <div className="attachment-panel">
+                                                <p className="panel-subtitle">File bài tập:</p>
+                                                {renderAttachmentList(assignmentAttachmentsById[assignment.id])}
+                                            </div>
+                                        ) : null}
 
                                         {!isTeacher ? (
                                             <div className="submission-box">
@@ -742,6 +904,25 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                                                     }
                                                     disabled={isLocked}
                                                 />
+                                                <div className="file-uploader">
+                                                    <label className="file-label">
+                                                        Đính kèm file đáp án
+                                                        <input
+                                                            type="file"
+                                                            multiple
+                                                            onChange={(e) => handleSubmissionFilesChange(assignment.id, e.target.files)}
+                                                            disabled={isLocked}
+                                                        />
+                                                    </label>
+                                                    <p className="panel-subtitle">File đính kèm đang lưu tạm trên trình duyệt.</p>
+                                                    {renderAttachmentList(
+                                                        submissionAttachments[assignment.id] || [],
+                                                        (id) => setSubmissionAttachments((prev) => ({
+                                                            ...prev,
+                                                            [assignment.id]: removeAttachment(prev[assignment.id] || [], id),
+                                                        }))
+                                                    )}
+                                                </div>
                                                 <div className="action-row">
                                                     <button
                                                         className="btn btn-primary"
@@ -1042,6 +1223,7 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                scroll={false}
                                 className={`tab-button ${item.href === `/lms/${section}` ? 'active' : ''}`}
                             >
                                 {item.label}
@@ -1049,19 +1231,21 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                         ))}
                     </div>
 
-                    {!activeClass ? (
-                        <div className="card empty-state">
-                            <p>Chọn lớp học để bắt đầu.</p>
-                        </div>
-                    ) : (
-                        <>
-                            {section === 'classes' ? renderOverviewPanel() : null}
-                            {section === 'lessons' ? renderLessonsPanel() : null}
-                            {section === 'assignments' ? renderAssignmentsPanel() : null}
-                            {section === 'submissions' ? renderSubmissionsPanel() : null}
-                            {section === 'grading' ? renderGradingPanel() : null}
-                        </>
-                    )}
+                    <div className={`section-surface ${isSwitching ? 'switching' : ''}`}>
+                        {!activeClass ? (
+                            <div className="card empty-state">
+                                <p>Chọn lớp học để bắt đầu.</p>
+                            </div>
+                        ) : (
+                            <>
+                                {section === 'classes' ? renderOverviewPanel() : null}
+                                {section === 'lessons' ? renderLessonsPanel() : null}
+                                {section === 'assignments' ? renderAssignmentsPanel() : null}
+                                {section === 'submissions' ? renderSubmissionsPanel() : null}
+                                {section === 'grading' ? renderGradingPanel() : null}
+                            </>
+                        )}
+                    </div>
                 </main>
             </div>
 
@@ -1134,6 +1318,10 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     gap: 1rem;
                 }
 
+                .workspace-main {
+                    min-height: 620px;
+                }
+
                 .sidebar-panel {
                     position: sticky;
                     top: 1rem;
@@ -1168,6 +1356,18 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     border-radius: calc(var(--card-radius) + 4px);
                     background: rgba(255,255,255,0.55);
                     backdrop-filter: blur(12px) saturate(130%);
+                }
+
+                .section-surface {
+                    display: grid;
+                    gap: 1rem;
+                    min-height: 420px;
+                    transition: opacity 160ms ease, transform 160ms ease;
+                }
+
+                .section-surface.switching {
+                    opacity: 0.6;
+                    transform: translateY(6px);
                 }
 
                 .tab-button {
@@ -1414,6 +1614,73 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                 .submission-item {
                     padding: 0.95rem;
                     background: linear-gradient(180deg, rgba(255,255,255,0.68), rgba(247,250,252,0.58));
+                }
+
+                .file-uploader {
+                    display: grid;
+                    gap: 0.6rem;
+                    padding: 0.75rem;
+                    border-radius: 12px;
+                    border: 1px dashed rgba(91,140,255,0.35);
+                    background: rgba(255,255,255,0.6);
+                }
+
+                .file-label {
+                    display: grid;
+                    gap: 0.35rem;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                }
+
+                .file-label input {
+                    width: 100%;
+                }
+
+                .attachment-panel {
+                    display: grid;
+                    gap: 0.5rem;
+                }
+
+                .attachment-list {
+                    display: grid;
+                    gap: 0.5rem;
+                }
+
+                .attachment-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.65rem 0.75rem;
+                    border-radius: 10px;
+                    border: 1px solid rgba(148,163,184,0.25);
+                    background: rgba(255,255,255,0.7);
+                }
+
+                .attachment-item strong {
+                    display: block;
+                    font-size: 0.85rem;
+                }
+
+                .attachment-item p {
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                }
+
+                .attachment-actions {
+                    display: inline-flex;
+                    gap: 0.5rem;
+                }
+
+                .attachment-actions a,
+                .attachment-actions button {
+                    font-size: 0.75rem;
+                    color: var(--accent-primary);
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    text-decoration: underline;
                 }
 
                 .input {
