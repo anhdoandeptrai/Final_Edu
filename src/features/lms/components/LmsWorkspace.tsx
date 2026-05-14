@@ -1893,6 +1893,170 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                         justify-content: flex-start;
                     }
                 }
+
+                @media (max-width: 640px) {
+                    .lms-shell {
+                        padding: 0.85rem;
+                    }
+
+                    .page-hero {
+                        padding: 1rem;
+                        border-radius: 22px;
+                        gap: 0.8rem;
+                    }
+
+                    .title {
+                        font-size: 1.7rem;
+                        line-height: 1.08;
+                    }
+
+                    .subtitle {
+                        font-size: 0.92rem;
+                    }
+
+                    .page-badges,
+                    .hero-badges {
+                        gap: 0.4rem;
+                    }
+
+                    .page-badges span,
+                    .hero-badges span,
+                    .lock-pill {
+                        padding: 0.42rem 0.68rem;
+                        font-size: 0.75rem;
+                    }
+
+                    .section-tabs {
+                        display: grid;
+                        grid-auto-flow: column;
+                        grid-auto-columns: minmax(92px, 1fr);
+                        overflow-x: auto;
+                        scrollbar-width: none;
+                        -ms-overflow-style: none;
+                        padding: 0.35rem;
+                        gap: 0.45rem;
+                    }
+
+                    .section-tabs::-webkit-scrollbar {
+                        display: none;
+                    }
+
+                    .tab-button {
+                        min-width: 92px;
+                        min-height: 42px;
+                        padding: 0.62rem 0.85rem;
+                        font-size: 0.83rem;
+                        white-space: nowrap;
+                    }
+
+                    .workspace-main {
+                        min-height: auto;
+                        gap: 0.8rem;
+                    }
+
+                    .sidebar-panel,
+                    .split-card,
+                    .hero-card,
+                    .item-card,
+                    .stat-card,
+                    .submission-item {
+                        border-radius: 22px;
+                    }
+
+                    .sidebar-panel {
+                        padding: 0.4rem;
+                    }
+
+                    .class-item,
+                    .split-card,
+                    .hero-card,
+                    .item-card {
+                        padding: 0.95rem;
+                    }
+
+                    .class-item-head,
+                    .class-meta,
+                    .panel-heading,
+                    .item-header,
+                    .action-row,
+                    .assignment-meta,
+                    .grading-grid {
+                        gap: 0.55rem;
+                    }
+
+                    .class-item p,
+                    .item-copy,
+                    .item-body,
+                    .panel-subtitle,
+                    .class-meta,
+                    .submission-status p,
+                    .item-header span {
+                        font-size: 0.82rem;
+                    }
+
+                    .class-list,
+                    .list-grid,
+                    .form-stack,
+                    .panel-stack,
+                    .section-surface {
+                        gap: 0.8rem;
+                    }
+
+                    .panel-heading {
+                        flex-direction: column;
+                    }
+
+                    .filter-row,
+                    .filter-stack {
+                        width: 100%;
+                    }
+
+                    .filter-chip {
+                        padding: 0.5rem 0.8rem;
+                        font-size: 0.75rem;
+                    }
+
+                    .class-search-card {
+                        padding: 0.9rem;
+                    }
+
+                    .class-search-input,
+                    .class-join-button {
+                        min-height: 42px;
+                    }
+
+                    .class-list-heading {
+                        align-items: flex-start;
+                    }
+
+                    .class-count-pill {
+                        font-size: 0.68rem;
+                        padding: 0.38rem 0.62rem;
+                    }
+
+                    .attachment-item,
+                    .file-uploader {
+                        gap: 0.5rem;
+                    }
+
+                    .input {
+                        padding: 0.9rem 1rem;
+                        font-size: 0.95rem;
+                    }
+
+                    .btn {
+                        padding: 0.92rem 1rem;
+                        font-size: 0.95rem;
+                    }
+
+                    .stats-grid {
+                        gap: 0.7rem;
+                    }
+
+                    .stat-card span {
+                        font-size: 1.45rem;
+                    }
+                }
             `}</style>
         </div>
     )
