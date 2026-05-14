@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { User } from '../../../shared/contexts/AuthContext'
 import {
     createAssignment,
@@ -58,6 +57,7 @@ function toLocalDateTimeInputValue(value: string): string {
 
 export default function LmsWorkspace({ user, section, classId }: Props) {
     const router = useRouter()
+    const [currentSection, setCurrentSection] = useState(section)
     const [classes, setClasses] = useState<LmsClass[]>([])
     const [activeClassId, setActiveClassId] = useState('')
     const [lessons, setLessons] = useState<LmsLesson[]>([])
@@ -73,6 +73,7 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
 
     const [newClassName, setNewClassName] = useState('')
     const [newClassDescription, setNewClassDescription] = useState('')
+    const [classSearch, setClassSearch] = useState('')
     const [joinCode, setJoinCode] = useState('')
 
     const [lessonTitle, setLessonTitle] = useState('')
@@ -95,6 +96,10 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
 
     const isTeacher = user.role === 'teacher'
 
+    useEffect(() => {
+        setCurrentSection(section)
+    }, [section])
+
     const activeClass = useMemo(
         () => classes.find((item) => item.id === activeClassId) || null,
         [classes, activeClassId]
@@ -102,6 +107,21 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
 
     const activeLessons = lessons
     const activeAssignments = assignments
+    const visibleClasses = useMemo(() => {
+        const keyword = classSearch.trim().toLowerCase()
+
+        if (!keyword) {
+            return classes
+        }
+
+        return classes.filter((item) => {
+            return (
+                item.name.toLowerCase().includes(keyword) ||
+                item.description.toLowerCase().includes(keyword) ||
+                item.joinCode.toLowerCase().includes(keyword)
+            )
+        })
+    }, [classes, classSearch])
 
     const studentPendingCount = useMemo(() => {
         if (isTeacher) {
@@ -555,29 +575,20 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                 {classes.length === 0 ? (
                     <div className="empty-state">
                         <p>Chưa có lớp học nào.</p>
-                        <p className="panel-subtitle">Tạo lớp mới hoặc tham gia bằng mã lớp.</p>
+                        <p className="panel-subtitle">Tìm lớp bằng tên hoặc mã lớp để tham gia.</p>
                     </div>
                 ) : (
                     <div className="class-list">
-                        {classes.map((item) => {
+                        {visibleClasses.map((item) => {
                             const isActive = item.id === activeClassId
-                            const classHref = `/lms/classes/${item.id}`
                             return (
                                 <button
                                     key={item.id}
                                     className={`class-item ${isActive ? 'active' : ''}`}
                                     onClick={() => {
-                                        // Always set the active class locally so panels update
-                                        // immediately. When viewing the classes section we
-                                        // also navigate to the class detail route.
                                         setActiveClassId(item.id)
                                         if (typeof window !== 'undefined') {
                                             window.localStorage.setItem('lms-active-class', item.id)
-                                        }
-
-                                        if (section === 'classes') {
-                                            router.push(classHref)
-                                            return
                                         }
                                     }}
                                 >
@@ -595,37 +606,44 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     </div>
                 )}
 
-                <div className="split-card">
-                    <h3>{isTeacher ? '➕ Tạo lớp mới' : '🔑 Tham gia lớp'}</h3>
-                    {isTeacher ? (
-                        <>
-                            <input
-                                className="input"
-                                placeholder="Tên lớp"
-                                value={newClassName}
-                                onChange={(e) => setNewClassName(e.target.value)}
-                            />
-                            <textarea
-                                className="input"
-                                placeholder="Mô tả ngắn"
-                                value={newClassDescription}
-                                onChange={(e) => setNewClassDescription(e.target.value)}
-                                rows={3}
-                            />
-                            <button className="btn btn-primary" onClick={handleCreateClass}>Tạo lớp</button>
-                        </>
-                    ) : (
-                        <>
-                            <input
-                                className="input"
-                                placeholder="Nhập mã lớp (VD: ABC123)"
-                                value={joinCode}
-                                onChange={(e) => setJoinCode(e.target.value)}
-                            />
-                            <button className="btn btn-primary" onClick={handleJoinClass}>Tham gia</button>
-                        </>
-                    )}
-                </div>
+                {!isTeacher ? (
+                    <div className="split-card">
+                        <h3>🔎 Tìm và tham gia lớp</h3>
+                        <input
+                            className="input"
+                            placeholder="Tìm theo tên, mô tả hoặc mã lớp"
+                            value={classSearch}
+                            onChange={(e) => setClassSearch(e.target.value)}
+                        />
+                        <input
+                            className="input"
+                            placeholder="Nhập mã lớp (VD: ABC123)"
+                            value={joinCode}
+                            onChange={(e) => setJoinCode(e.target.value)}
+                        />
+                        <button className="btn btn-primary" onClick={handleJoinClass}>Tham gia lớp</button>
+                    </div>
+                ) : null}
+
+                {isTeacher ? (
+                    <div className="split-card">
+                        <h3>➕ Tạo lớp mới</h3>
+                        <input
+                            className="input"
+                            placeholder="Tên lớp"
+                            value={newClassName}
+                            onChange={(e) => setNewClassName(e.target.value)}
+                        />
+                        <textarea
+                            className="input"
+                            placeholder="Mô tả ngắn"
+                            value={newClassDescription}
+                            onChange={(e) => setNewClassDescription(e.target.value)}
+                            rows={3}
+                        />
+                        <button className="btn btn-primary" onClick={handleCreateClass}>Tạo lớp</button>
+                    </div>
+                ) : null}
             </aside>
         )
     }
@@ -1220,14 +1238,14 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                 <main className="workspace-main">
                     <div className="section-tabs card">
                         {(isTeacher ? LMS_NAV : LMS_NAV.filter((item) => item.href !== '/lms/submissions')).map((item) => (
-                            <Link
+                            <button
                                 key={item.href}
-                                href={item.href}
-                                scroll={false}
-                                className={`tab-button ${item.href === `/lms/${section}` ? 'active' : ''}`}
+                                type="button"
+                                className={`tab-button ${item.href === `/lms/${currentSection}` ? 'active' : ''}`}
+                                onClick={() => setCurrentSection(item.href.replace('/lms/', '') as typeof section)}
                             >
                                 {item.label}
-                            </Link>
+                            </button>
                         ))}
                     </div>
 
@@ -1238,11 +1256,11 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                             </div>
                         ) : (
                             <>
-                                {section === 'classes' ? renderOverviewPanel() : null}
-                                {section === 'lessons' ? renderLessonsPanel() : null}
-                                {section === 'assignments' ? renderAssignmentsPanel() : null}
-                                {section === 'submissions' ? renderSubmissionsPanel() : null}
-                                {section === 'grading' ? renderGradingPanel() : null}
+                                {currentSection === 'classes' ? renderOverviewPanel() : null}
+                                {currentSection === 'lessons' ? renderLessonsPanel() : null}
+                                {currentSection === 'assignments' ? renderAssignmentsPanel() : null}
+                                {currentSection === 'submissions' ? renderSubmissionsPanel() : null}
+                                {currentSection === 'grading' ? renderGradingPanel() : null}
                             </>
                         )}
                     </div>
