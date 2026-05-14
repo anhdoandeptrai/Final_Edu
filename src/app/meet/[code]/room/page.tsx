@@ -11,7 +11,7 @@ import {
   TrackToggle,
   useRoomContext,
 } from '@livekit/components-react'
-import { Track } from 'livekit-client'
+import { RoomEvent, Track } from 'livekit-client'
 import dynamic from 'next/dynamic'
 import MeetingLayout from '../../../../features/edu-meet/components/meeting/MeetingLayout'
 import ParticipantGrid, { ParticipantEntry } from '../../../../features/edu-meet/components/meeting/ParticipantGrid'
@@ -34,6 +34,16 @@ interface MeetSettings {
   userRole?: 'teacher' | 'student'
   userId?: string
 }
+
+type MeetingChatMessage = {
+  id: string
+  sender: string
+  message: string
+  timestamp: number
+  isMine: boolean
+}
+
+const CHAT_TOPIC = 'meeting-chat'
 
 function AIDetectionManager({ settings }: { settings: MeetSettings }) {
   const participants = useParticipants()
@@ -72,7 +82,17 @@ function AIDetectionManager({ settings }: { settings: MeetSettings }) {
   return null
 }
 
-function ControlBar({ roomCode, onDisconnect }: { roomCode: string; onDisconnect: () => void }) {
+function ControlBar({
+  roomCode,
+  isChatOpen,
+  onToggleChat,
+  onDisconnect,
+}: {
+  roomCode: string
+  isChatOpen: boolean
+  onToggleChat: () => void
+  onDisconnect: () => void
+}) {
   const [copied, setCopied] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
   const room = useRoomContext()
@@ -118,6 +138,15 @@ function ControlBar({ roomCode, onDisconnect }: { roomCode: string; onDisconnect
       <TrackToggle source={Track.Source.ScreenShare} className={styles.controlButton} />
 
       <button
+        type="button"
+        onClick={onToggleChat}
+        className={`${styles.controlButton} ${isChatOpen ? styles.controlButtonActive : ''}`}
+        title={isChatOpen ? 'Ẩn chat' : 'Hiện chat'}
+      >
+        💬
+      </button>
+
+      <button
         onClick={handleDisconnect}
         disabled={isDisconnecting}
         className={`${styles.controlButton} ${styles.controlButtonDanger}`}
@@ -134,6 +163,7 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
   const [token, setToken] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [isConnected, setIsConnected] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(false)
   const [cameraWarnings, setCameraWarnings] = useState<CameraWarning[]>([])
   const cameraStatusRef = useRef<Map<string, boolean>>(new Map())
 
@@ -257,6 +287,8 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
       <RoomStage
         code={code}
         isConnected={isConnected}
+        isChatOpen={isChatOpen}
+        onToggleChat={() => setIsChatOpen(prev => !prev)}
         onDisconnect={handleDisconnect}
         settings={settings}
         cameraWarnings={cameraWarnings}
@@ -287,6 +319,8 @@ function RoomContent({ settings, code }: { settings: MeetSettings; code: string 
 function RoomStage({
   code,
   isConnected,
+  isChatOpen,
+  onToggleChat,
   onDisconnect,
   settings,
   cameraWarnings,
@@ -295,16 +329,21 @@ function RoomStage({
 }: {
   code: string
   isConnected: boolean
+  isChatOpen: boolean
+  onToggleChat: () => void
   onDisconnect: () => void
   settings: MeetSettings
   cameraWarnings: CameraWarning[]
   onCameraWarningsChange: Dispatch<SetStateAction<CameraWarning[]>>
   cameraStatusRef: MutableRefObject<Map<string, boolean>>
 }) {
+  const room = useRoomContext()
   const participants = useParticipants()
   const { localParticipant } = useLocalParticipant()
   const cameraTracks = useTracks([Track.Source.Camera])
   const screenTracks = useTracks([Track.Source.ScreenShare])
+  const [chatMessages, setChatMessages] = useState<MeetingChatMessage[]>([])
+  const [chatDraft, setChatDraft] = useState('')
 
   const orderedParticipants = useMemo(() => {
     const local = localParticipant ? [localParticipant] : []
@@ -329,6 +368,93 @@ function RoomStage({
   const maxMain = hasScreenShare ? 6 : 8
   const mainParticipants = participantEntries.slice(0, maxMain)
   const overflowParticipants = participantEntries.slice(maxMain)
+
+  useEffect(() => {
+    const handleDataReceived = (
+      payload: Uint8Array,
+      participant?: Parameters<typeof room.on>[1] extends never ? never : any,
+      _kind?: unknown,
+      topic?: string
+    ) => {
+      if (topic !== CHAT_TOPIC) {
+        return
+      }
+
+      try {
+        const text = new TextDecoder().decode(payload)
+        const parsed = JSON.parse(text) as {
+          id?: string
+          sender?: string
+          message?: string
+          timestamp?: number
+        }
+
+        if (!parsed.message?.trim()) {
+          return
+        }
+
+        if (participant?.sid === room.localParticipant.sid) {
+          return
+        }
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: parsed.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            sender: parsed.sender || participant?.name || participant?.identity || 'Ẩn danh',
+            message: parsed.message.trim(),
+            timestamp: parsed.timestamp || Date.now(),
+            isMine: false,
+          },
+        ].slice(-100))
+      } catch (err) {
+        console.error('Chat parse error:', err)
+      }
+    }
+
+    room.on(RoomEvent.DataReceived, handleDataReceived)
+    return () => {
+      room.off(RoomEvent.DataReceived, handleDataReceived)
+    }
+  }, [room])
+
+  const sendChatMessage = useCallback(async () => {
+    const message = chatDraft.trim()
+    if (!message) return
+
+    const chatEntry: MeetingChatMessage = {
+      id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      sender: settings.userName,
+      message,
+      timestamp: Date.now(),
+      isMine: true,
+    }
+
+    try {
+      await room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({
+          id: chatEntry.id,
+          sender: chatEntry.sender,
+          message: chatEntry.message,
+          timestamp: chatEntry.timestamp,
+        })),
+        { reliable: true, topic: CHAT_TOPIC }
+      )
+
+      setChatMessages((prev) => [...prev, chatEntry].slice(-100))
+      setChatDraft('')
+    } catch (err) {
+      console.error('Send chat error:', err)
+    }
+  }, [chatDraft, room.localParticipant, settings.userName])
+
+  const handleChatKeyDown = useCallback((event: import('react').KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    void sendChatMessage()
+  }, [sendChatMessage])
 
   useEffect(() => {
     if (settings.userRole !== 'teacher') return
@@ -381,37 +507,84 @@ function RoomStage({
   ]), [participantEntries, overflowParticipants, settings.userRole, cameraWarnings])
 
   return (
-    <MeetingLayout
-      header={(
-        <>
-          <div className={styles.headerLeft}>
-            <span>🎓</span>
-            <span className={styles.headerBrand}>Edu Insight Meet</span>
-          </div>
-          <div className={styles.headerRight}>
-            <div
-              className={styles.connectionBadge}
-              style={{
-                background: isConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                border: `1px solid ${isConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-                color: isConnected ? 'var(--success)' : 'var(--warning)'
-              }}
-            >
-              <span
-                className={styles.connectionDot}
-                style={{ background: isConnected ? 'var(--success)' : 'var(--warning)' }}
-              />
-              {isConnected ? 'Đã kết nối' : 'Đang kết nối'}
+    <>
+      <MeetingLayout
+        header={(
+          <>
+            <div className={styles.headerLeft}>
+              <span>🎓</span>
+              <span className={styles.headerBrand}>Edu Insight Meet</span>
             </div>
+            <div className={styles.headerRight}>
+              <div
+                className={styles.connectionBadge}
+                style={{
+                  background: isConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                  border: `1px solid ${isConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                  color: isConnected ? 'var(--success)' : 'var(--warning)'
+                }}
+              >
+                <span
+                  className={styles.connectionDot}
+                  style={{ background: isConnected ? 'var(--success)' : 'var(--warning)' }}
+                />
+                {isConnected ? 'Đã kết nối' : 'Đang kết nối'}
+              </div>
+            </div>
+          </>
+        )}
+        sidebar={<RightSidebar sections={sections} />}
+        footer={<ControlBar roomCode={code} isChatOpen={isChatOpen} onToggleChat={onToggleChat} onDisconnect={onDisconnect} />}
+      >
+        <ScreenShareView screenTracks={screenTracks} />
+        <ParticipantGrid participants={mainParticipants} hasScreenShare={hasScreenShare} />
+      </MeetingLayout>
+      {isChatOpen ? (
+        <div className={styles.chatDrawer}>
+          <div className={styles.chatDrawerHeader}>
+            <div>
+              <div className={styles.chatTitle}>💬 Chat cuộc họp</div>
+              <div className={styles.chatSubtitle}>{chatMessages.length} tin nhắn</div>
+            </div>
+            <button type="button" className={styles.controlButton} onClick={onToggleChat} aria-label="Close chat">
+              ✕
+            </button>
           </div>
-        </>
-      )}
-      sidebar={<RightSidebar sections={sections} />}
-      footer={<ControlBar roomCode={code} onDisconnect={onDisconnect} />}
-    >
-      <ScreenShareView screenTracks={screenTracks} />
-      <ParticipantGrid participants={mainParticipants} hasScreenShare={hasScreenShare} />
-    </MeetingLayout>
+
+          <div className={styles.chatMessages}>
+            {chatMessages.length === 0 ? (
+              <div className={styles.chatEmptyState}>
+                <p>Chưa có tin nhắn nào.</p>
+                <p>Gửi lời nhắn đầu tiên cho mọi người trong phòng.</p>
+              </div>
+            ) : (
+              chatMessages.map((item) => (
+                <div key={item.id} className={`${styles.chatMessage} ${item.isMine ? styles.chatMessageOwn : ''}`}>
+                  <div className={styles.chatMessageMeta}>
+                    <strong>{item.isMine ? 'Bạn' : item.sender}</strong>
+                    <span>{new Date(item.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div className={styles.chatBubble}>{item.message}</div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className={styles.chatComposer}>
+            <input
+              className={styles.chatInput}
+              value={chatDraft}
+              onChange={(event) => setChatDraft(event.target.value)}
+              onKeyDown={handleChatKeyDown}
+              placeholder="Nhập tin nhắn..."
+            />
+            <button type="button" className={styles.chatSendButton} onClick={() => void sendChatMessage()}>
+              Gửi
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
 
