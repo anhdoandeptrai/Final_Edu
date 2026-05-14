@@ -20,6 +20,7 @@ import RightSidebar from '../../../../features/edu-meet/components/meeting/Right
 import AIBehaviorPanel from '../../../../features/edu-meet/components/meeting/AIBehaviorPanel'
 import ParticipantSidebar from '../../../../features/edu-meet/components/meeting/ParticipantSidebar'
 import AIAnalyticsPanel, { CameraWarning } from '../../../../features/edu-meet/components/meeting/AIAnalyticsPanel'
+import useBreakpoints from '../../../../features/edu-meet/hooks/useBreakpoints'
 import styles from '../../../../features/edu-meet/components/meeting/MeetingRoom.module.css'
 
 const AIBehaviorDetector = dynamic(
@@ -96,6 +97,7 @@ function ControlBar({
   const [copied, setCopied] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
   const room = useRoomContext()
+  const { isMobile } = useBreakpoints()
 
   const copyCode = () => {
     navigator.clipboard.writeText(roomCode)
@@ -137,14 +139,16 @@ function ControlBar({
       <TrackToggle source={Track.Source.Camera} className={styles.controlButton} />
       <TrackToggle source={Track.Source.ScreenShare} className={styles.controlButton} />
 
-      <button
-        type="button"
-        onClick={onToggleChat}
-        className={`${styles.controlButton} ${isChatOpen ? styles.controlButtonActive : ''}`}
-        title={isChatOpen ? 'Ẩn chat' : 'Hiện chat'}
-      >
-        💬
-      </button>
+      {isMobile && (
+        <button
+          type="button"
+          onClick={onToggleChat}
+          className={`${styles.controlButton} ${isChatOpen ? styles.controlButtonActive : ''}`}
+          title={isChatOpen ? 'Ẩn chat' : 'Hiện chat'}
+        >
+          💬
+        </button>
+      )}
 
       <button
         onClick={handleDisconnect}
@@ -340,10 +344,13 @@ function RoomStage({
   const room = useRoomContext()
   const participants = useParticipants()
   const { localParticipant } = useLocalParticipant()
+  const { isMobile } = useBreakpoints()
   const cameraTracks = useTracks([Track.Source.Camera])
   const screenTracks = useTracks([Track.Source.ScreenShare])
   const [chatMessages, setChatMessages] = useState<MeetingChatMessage[]>([])
   const [chatDraft, setChatDraft] = useState('')
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('')
+  const [followAll, setFollowAll] = useState(true)
 
   const orderedParticipants = useMemo(() => {
     const local = localParticipant ? [localParticipant] : []
@@ -363,6 +370,31 @@ function RoomStage({
       isLocal: participant.sid === localParticipant?.sid
     }))
   }, [orderedParticipants, cameraTrackBySid, localParticipant])
+
+  const studentOptions = useMemo(() => {
+    return participantEntries.filter((entry) => !entry.isLocal)
+  }, [participantEntries])
+
+  useEffect(() => {
+    if (studentOptions.length === 0) {
+      setSelectedStudentId('')
+      return
+    }
+
+    if (!selectedStudentId || !studentOptions.some((entry) => entry.participant.sid === selectedStudentId)) {
+      setSelectedStudentId(studentOptions[0].participant.sid)
+    }
+  }, [selectedStudentId, studentOptions])
+
+  const selectedStudent = useMemo(() => {
+    return participantEntries.find((entry) => entry.participant.sid === selectedStudentId) ?? null
+  }, [participantEntries, selectedStudentId])
+
+  const selectedStudentWarnings = useMemo(() => {
+    if (!selectedStudent) return []
+    const selectedName = selectedStudent.participant.name || selectedStudent.participant.identity
+    return cameraWarnings.filter((warning) => warning.name === selectedName)
+  }, [cameraWarnings, selectedStudent])
 
   const hasScreenShare = screenTracks.length > 0
   const maxMain = hasScreenShare ? 6 : 8
@@ -482,29 +514,196 @@ function RoomStage({
     })
   }, [participantEntries, settings.userRole, onCameraWarningsChange, cameraStatusRef])
 
-  const sections = useMemo(() => ([
-    {
+  const chatSectionContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+        Giao tiếp nhanh với các thành viên trong phòng.
+      </div>
+      <div className={styles.chatMessages} style={{ minHeight: '180px', maxHeight: '240px' }}>
+        {chatMessages.length === 0 ? (
+          <div className={styles.chatEmptyState}>
+            <p>Chưa có tin nhắn nào.</p>
+            <p>Gửi lời nhắn đầu tiên cho mọi người trong phòng.</p>
+          </div>
+        ) : (
+          chatMessages.map((item) => (
+            <div key={item.id} className={`${styles.chatMessage} ${item.isMine ? styles.chatMessageOwn : ''}`}>
+              <div className={styles.chatMessageMeta}>
+                <strong>{item.isMine ? 'Bạn' : item.sender}</strong>
+                <span>{new Date(item.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className={styles.chatBubble}>{item.message}</div>
+            </div>
+          ))
+        )}
+      </div>
+      <div className={styles.chatComposer}>
+        <input
+          className={styles.chatInput}
+          value={chatDraft}
+          onChange={(event) => setChatDraft(event.target.value)}
+          onKeyDown={handleChatKeyDown}
+          placeholder="Nhập tin nhắn..."
+        />
+        <button type="button" className={styles.chatSendButton} onClick={() => void sendChatMessage()}>
+          Gửi
+        </button>
+      </div>
+    </div>
+  )
+
+  const followSectionContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className={styles.followCard}>
+        <div className={styles.followHeader}>
+          <div>
+            <div className={styles.followTitle}>Chọn chế độ theo dõi</div>
+            <div className={styles.followSubtitle}>Dễ dàng chọn toàn bộ hoặc cụ thể từng học sinh để xem phân tích chi tiết.</div>
+          </div>
+          <div className={styles.followModeBadge}>
+            {followAll ? 'Toàn bộ' : 'Cụ thể'}
+          </div>
+        </div>
+
+        <div className={styles.followButtons}>
+          <button
+            type="button"
+            className={`${styles.followModeButton} ${followAll ? styles.activeFollowButton : ''}`}
+            onClick={() => setFollowAll(true)}
+          >
+            Theo dõi toàn bộ
+          </button>
+          <button
+            type="button"
+            className={`${styles.followModeButton} ${!followAll ? styles.activeFollowButton : ''}`}
+            onClick={() => setFollowAll(false)}
+          >
+            Theo dõi cụ thể
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.followCard}>
+        <div className={styles.followSummary}>
+          <div>
+            <div className={styles.followSummaryLabel}>Học sinh đang chọn</div>
+            <div className={styles.followStudentName}>
+              {selectedStudent ? selectedStudent.participant.name || selectedStudent.participant.identity : 'Chưa có học sinh'}
+            </div>
+          </div>
+          <div className={styles.followStatusBadge} style={{ background: selectedStudent?.hasVideo ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)', color: selectedStudent?.hasVideo ? '#10b981' : '#ef4444' }}>
+            {selectedStudent ? (selectedStudent.hasVideo ? 'Camera bật' : 'Camera tắt') : 'Không có dữ liệu'}
+          </div>
+        </div>
+
+        <div className={styles.followStats}>
+          <div className={styles.followStatCard}>
+            <div className={styles.followStatValue}>{participantEntries.length - 1}</div>
+            <div className={styles.followStatLabel}>Số học sinh</div>
+          </div>
+          <div className={styles.followStatCard}>
+            <div className={styles.followStatValue}>{selectedStudent ? (selectedStudent.hasVideo ? 'Bật' : 'Tắt') : '-'}</div>
+            <div className={styles.followStatLabel}>Trạng thái camera</div>
+          </div>
+          <div className={styles.followStatCard}>
+            <div className={styles.followStatValue}>{selectedStudentWarnings.length}</div>
+            <div className={styles.followStatLabel}>Cảnh báo</div>
+          </div>
+        </div>
+      </div>
+
+      {!followAll && (
+        <div className={styles.followCard}>
+          <div className={styles.followStudentSelectLabel}>Chọn học sinh</div>
+          <div className={styles.followStudentList}>
+            {studentOptions.map((entry) => {
+              const displayName = entry.participant.name || entry.participant.identity
+              const isActive = entry.participant.sid === selectedStudentId
+              return (
+                <button
+                  key={entry.participant.sid}
+                  type="button"
+                  className={`${styles.followStudentRow} ${isActive ? styles.activeFollowButton : ''}`}
+                  onClick={() => setSelectedStudentId(entry.participant.sid)}
+                >
+                  <div>
+                    <div className={styles.followStudentNameSmall}>{displayName}</div>
+                    <div className={styles.followStudentMeta}>{entry.hasVideo ? 'Camera đang bật' : 'Camera đang tắt'}</div>
+                  </div>
+                  <div className={styles.followStudentBadge} style={{ background: entry.hasVideo ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)', color: entry.hasVideo ? '#10b981' : '#ef4444' }}>
+                    {entry.hasVideo ? 'Bật' : 'Tắt'}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {selectedStudent && (
+        <div className={styles.followCard}>
+          <div className={styles.followCardTitle}>Phân tích chi tiết</div>
+          <div className={styles.followCardText}>
+            {followAll
+              ? 'Đang hiển thị phân tích nhanh cho toàn bộ học sinh. Chuyển sang chế độ cụ thể để xem chi tiết từng cá nhân.'
+              : 'Đang hiển thị phân tích chi tiết cho học sinh đã chọn. Các cảnh báo camera được cập nhật theo thời gian thực.'}
+          </div>
+          {selectedStudentWarnings.length > 0 ? (
+            <div className={styles.followWarningList}>
+              {selectedStudentWarnings.map((warning) => (
+                <div key={warning.id} className={styles.followWarningItem}>
+                  <div className={styles.followWarningHeading}>{warning.status}</div>
+                  <div>{new Date(warning.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.followCardText}>Không có cảnh báo mới cho học sinh này.</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
+  const sections = useMemo(() => {
+    const historySection = {
       id: 'history',
       title: 'Lịch sử hành vi AI',
       icon: '📊',
       content: <AIBehaviorPanel maxEntries={20} />,
       defaultOpen: true
-    },
-    {
+    }
+
+    const participantsSection = {
       id: 'participants',
       title: 'Thành viên',
       icon: '👥',
       content: <ParticipantSidebar participants={participantEntries} overflow={overflowParticipants} />,
       defaultOpen: true
-    },
-    {
+    }
+
+    const analyticsSection = {
       id: 'analytics',
-      title: 'AI realtime',
-      icon: '🤖',
-      content: <AIAnalyticsPanel isTeacher={settings.userRole === 'teacher'} cameraWarnings={cameraWarnings} />,
+      title: 'Theo dõi học sinh',
+      icon: '🎯',
+      content: followSectionContent,
       defaultOpen: true
     }
-  ]), [participantEntries, overflowParticipants, settings.userRole, cameraWarnings])
+
+    const chatSection = {
+      id: 'chat',
+      title: 'Chat cuộc họp',
+      icon: '💬',
+      content: chatSectionContent,
+      defaultOpen: true
+    }
+
+    if (settings.userRole === 'teacher') {
+      return [analyticsSection, participantsSection, chatSection]
+    }
+
+    return [historySection, participantsSection, chatSection]
+  }, [participantEntries, overflowParticipants, settings.userRole, cameraWarnings, followSectionContent, chatSectionContent])
 
   return (
     <>
@@ -539,7 +738,7 @@ function RoomStage({
         <ScreenShareView screenTracks={screenTracks} />
         <ParticipantGrid participants={mainParticipants} hasScreenShare={hasScreenShare} />
       </MeetingLayout>
-      {isChatOpen ? (
+      {isMobile && isChatOpen && (
         <div className={styles.chatDrawer}>
           <div className={styles.chatDrawerHeader}>
             <div>
@@ -550,40 +749,9 @@ function RoomStage({
               ✕
             </button>
           </div>
-
-          <div className={styles.chatMessages}>
-            {chatMessages.length === 0 ? (
-              <div className={styles.chatEmptyState}>
-                <p>Chưa có tin nhắn nào.</p>
-                <p>Gửi lời nhắn đầu tiên cho mọi người trong phòng.</p>
-              </div>
-            ) : (
-              chatMessages.map((item) => (
-                <div key={item.id} className={`${styles.chatMessage} ${item.isMine ? styles.chatMessageOwn : ''}`}>
-                  <div className={styles.chatMessageMeta}>
-                    <strong>{item.isMine ? 'Bạn' : item.sender}</strong>
-                    <span>{new Date(item.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-                  <div className={styles.chatBubble}>{item.message}</div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className={styles.chatComposer}>
-            <input
-              className={styles.chatInput}
-              value={chatDraft}
-              onChange={(event) => setChatDraft(event.target.value)}
-              onKeyDown={handleChatKeyDown}
-              placeholder="Nhập tin nhắn..."
-            />
-            <button type="button" className={styles.chatSendButton} onClick={() => void sendChatMessage()}>
-              Gửi
-            </button>
-          </div>
+          {chatSectionContent}
         </div>
-      ) : null}
+      )}
     </>
   )
 }

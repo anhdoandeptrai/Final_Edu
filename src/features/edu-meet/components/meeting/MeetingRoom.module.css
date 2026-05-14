@@ -28,6 +28,7 @@
 .headerBrand {
   font-weight: 700;
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
 }
@@ -69,7 +70,8 @@
   flex-direction: column;
   gap: 16px;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .screenShare {
@@ -521,6 +523,190 @@
   gap: 6px;
   align-items: center;
   border: 1px solid var(--border-color);
+}
+
+.followCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+}
+
+.followHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.followTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.followSubtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.followModeBadge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.followButtons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.followModeButton {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.activeFollowButton {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(37, 99, 235, 0.2));
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #1d4ed8;
+}
+
+.followSummary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.followSummaryLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.followStudentName {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.followStatusBadge {
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.followStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.followStatCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.followStatValue {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.followStatLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.followStudentSelectLabel {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.followStudentList {
+  display: grid;
+  gap: 10px;
+}
+
+.followStudentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.followStudentNameSmall {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.followStudentMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.followStudentBadge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.followCardTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.followCardText {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.followWarningList {
+  display: grid;
+  gap: 10px;
+}
+
+.followWarningItem {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(254, 243, 199, 0.4);
+}
+
+.followWarningHeading {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 
 .warningPanel {
