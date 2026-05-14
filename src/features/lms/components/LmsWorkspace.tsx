@@ -1349,10 +1349,10 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                 }
 
                 .section-tabs {
-                    display: flex;
-                    flex-wrap: wrap;
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
                     gap: 0.6rem;
-                    padding: 0.35rem;
+                    padding: 0.4rem;
                     border-radius: calc(var(--card-radius) + 4px);
                     background: rgba(255,255,255,0.55);
                     backdrop-filter: blur(12px) saturate(130%);
@@ -1374,14 +1374,14 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    border: 0;
+                    min-height: 44px;
+                    border: 1px solid rgba(148,163,184,0.2);
                     border-radius: 999px;
-                    padding: 0.7rem 1rem;
-                    background: transparent;
+                    padding: 0.65rem 1rem;
+                    background: rgba(255,255,255,0.6);
                     color: var(--text-secondary);
                     text-decoration: none;
                     cursor: pointer;
-                    border: 1px solid transparent;
                     transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
                 }
 
@@ -1389,7 +1389,7 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     background: linear-gradient(135deg, rgba(91,140,255,0.96), rgba(102,214,255,0.9));
                     color: white;
                     box-shadow: 0 10px 20px rgba(91,140,255,0.18);
-                    border-color: rgba(255,255,255,0.1);
+                    border-color: rgba(91,140,255,0.45);
                 }
 
                 .tab-button:hover {
@@ -1752,7 +1752,7 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     }
 
                     .section-tabs {
-                        flex-direction: column;
+                        grid-template-columns: 1fr;
                     }
 
                     .tab-button {
