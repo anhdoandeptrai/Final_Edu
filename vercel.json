@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build:vercel",
+  "buildCommand": "SKIP_DB_MIGRATE=1 npm run build:vercel",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs"

@@ -1,17 +1,10 @@
 'use client'
 
-import { VideoTrack } from '@livekit/components-react'
-import { Track } from 'livekit-client'
+import { VideoTrack, type TrackReference } from '@livekit/components-react'
 import styles from './MeetingRoom.module.css'
 
 interface Props {
-    screenTracks: Array<{
-        participant: { sid: string; name?: string; identity: string }
-        source: Track.Source
-        publication?: unknown
-        track?: unknown
-        trackRef: any
-    }>
+    screenTracks: TrackReference[]
 }
 
 export default function ScreenShareView({ screenTracks }: Props) {

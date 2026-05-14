@@ -98,8 +98,8 @@ vercel env add NEXT_PUBLIC_LIVEKIT_URL production
 vercel --prod
 ```
 
-Build now runs `prisma generate` + optional `prisma migrate deploy` automatically.
-If you prefer a separate migration pipeline, set `SKIP_DB_MIGRATE=1` in Vercel env.
+Vercel builds now run `prisma generate` + `next build --webpack` with DB migrations skipped.
+Run `prisma migrate deploy` separately against your production database when you need a schema update.
 
 ### 4. Verify backend health
 
