@@ -563,67 +563,110 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
     }
 
     function renderClassSidebar(): JSX.Element {
+        const joinedClassCount = classes.length
+
         return (
             <aside className="card sidebar-panel">
                 <div className="panel-heading">
                     <div>
                         <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>📚 Lớp học</h2>
-                        <p className="panel-subtitle">Chọn lớp để quản lý bài học và bài tập</p>
+                        <p className="panel-subtitle">
+                            {isTeacher
+                                ? 'Chọn lớp để quản lý bài học và bài tập'
+                                : 'Tìm lớp, tham gia bằng mã và xem các lớp đã tham gia'}
+                        </p>
                     </div>
                 </div>
 
-                {classes.length === 0 ? (
-                    <div className="empty-state">
-                        <p>Chưa có lớp học nào.</p>
-                        <p className="panel-subtitle">Tìm lớp bằng tên hoặc mã lớp để tham gia.</p>
-                    </div>
-                ) : (
-                    <div className="class-list">
-                        {visibleClasses.map((item) => {
-                            const isActive = item.id === activeClassId
-                            return (
-                                <button
-                                    key={item.id}
-                                    className={`class-item ${isActive ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveClassId(item.id)
-                                        if (typeof window !== 'undefined') {
-                                            window.localStorage.setItem('lms-active-class', item.id)
-                                        }
-                                    }}
-                                >
-                                    <div>
-                                        <strong>{item.name}</strong>
-                                        <p>{item.description || 'Không có mô tả'}</p>
-                                    </div>
-                                    <div className="class-meta">
-                                        <span>{item.studentIds.length} học sinh</span>
-                                        {isTeacher ? <span>Mã: {item.joinCode}</span> : null}
-                                    </div>
-                                </button>
-                            )
-                        })}
-                    </div>
-                )}
-
                 {!isTeacher ? (
-                    <div className="split-card">
-                        <h3>🔎 Tìm và tham gia lớp</h3>
-                        <input
-                            className="input"
-                            placeholder="Tìm theo tên, mô tả hoặc mã lớp"
-                            value={classSearch}
-                            onChange={(e) => setClassSearch(e.target.value)}
-                        />
-                        <input
-                            className="input"
-                            placeholder="Nhập mã lớp (VD: ABC123)"
-                            value={joinCode}
-                            onChange={(e) => setJoinCode(e.target.value)}
-                        />
-                        <button className="btn btn-primary" onClick={handleJoinClass}>Tham gia lớp</button>
+                    <div className="split-card class-search-card">
+                        <div className="panel-heading" style={{ marginBottom: 0 }}>
+                            <div>
+                                <h3>🔎 Tìm và tham gia lớp</h3>
+                                <p className="panel-subtitle">
+                                    Tìm nhanh theo tên, mô tả hoặc mã lớp.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="class-search-box">
+                            <input
+                                className="input class-search-input"
+                                placeholder="Tìm theo tên, mô tả hoặc mã lớp"
+                                value={classSearch}
+                                onChange={(e) => setClassSearch(e.target.value)}
+                            />
+                            <input
+                                className="input class-search-input"
+                                placeholder="Nhập mã lớp (VD: ABC123)"
+                                value={joinCode}
+                                onChange={(e) => setJoinCode(e.target.value)}
+                            />
+                            <button className="btn btn-primary class-join-button" onClick={handleJoinClass}>Tham gia lớp</button>
+                        </div>
                     </div>
                 ) : null}
+
+                {classes.length === 0 ? (
+                    <div className="empty-state">
+                        <p>{isTeacher ? 'Chưa có lớp học nào.' : 'Bạn chưa tham gia lớp nào.'}</p>
+                        <p className="panel-subtitle">
+                            {isTeacher
+                                ? 'Tạo lớp mới ở bên dưới.'
+                                : 'Dùng khối tìm lớp ở trên để tham gia một lớp học.'}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="class-list-wrap">
+                        <div className="panel-heading class-list-heading" style={{ marginBottom: 0 }}>
+                            <div>
+                                <h3>🧭 Lớp đã tham gia</h3>
+                                <p className="panel-subtitle">
+                                    {isTeacher ? 'Danh sách lớp của giáo viên' : `${joinedClassCount} lớp đã tham gia`}
+                                </p>
+                            </div>
+                            {!isTeacher ? (
+                                <span className="class-count-pill">{visibleClasses.length} lớp hiển thị</span>
+                            ) : null}
+                        </div>
+
+                        {visibleClasses.length === 0 ? (
+                            <div className="empty-state class-empty-state">
+                                <p>Không tìm thấy lớp phù hợp.</p>
+                                <p className="panel-subtitle">Thử nhập lại tên lớp hoặc mã lớp khác.</p>
+                            </div>
+                        ) : (
+                            <div className="class-list">
+                                {visibleClasses.map((item) => {
+                                    const isActive = item.id === activeClassId
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            className={`class-item ${isActive ? 'active' : ''}`}
+                                            onClick={() => {
+                                                setActiveClassId(item.id)
+                                                if (typeof window !== 'undefined') {
+                                                    window.localStorage.setItem('lms-active-class', item.id)
+                                                }
+                                            }}
+                                        >
+                                            <div>
+                                                <div className="class-item-head">
+                                                    <strong>{item.name}</strong>
+                                                    {isActive ? <span className="class-active-pill">Đang chọn</span> : null}
+                                                </div>
+                                                <p>{item.description || 'Không có mô tả'}</p>
+                                            </div>
+                                            <div className="class-meta">
+                                                <span>{item.studentIds.length} học sinh</span>
+                                                {isTeacher ? <span>Mã: {item.joinCode}</span> : <span>Mã: {item.joinCode}</span>}
+                                            </div>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {isTeacher ? (
                     <div className="split-card">
@@ -1449,6 +1492,75 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     gap: 0.75rem;
                 }
 
+                .class-list-wrap {
+                    display: grid;
+                    gap: 0.8rem;
+                }
+
+                .class-search-card {
+                    padding: 1rem;
+                    display: grid;
+                    gap: 0.85rem;
+                }
+
+                .class-search-box {
+                    display: grid;
+                    gap: 0.65rem;
+                }
+
+                .class-search-input {
+                    width: 100%;
+                    min-height: 44px;
+                    border-radius: 999px;
+                    padding-inline: 1rem;
+                }
+
+                .class-join-button {
+                    width: 100%;
+                    min-height: 44px;
+                    border-radius: 999px;
+                }
+
+                .class-list-heading {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 0.75rem;
+                }
+
+                .class-count-pill,
+                .class-active-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 999px;
+                    font-size: 0.72rem;
+                    font-weight: 700;
+                    letter-spacing: 0.02em;
+                }
+
+                .class-count-pill {
+                    padding: 0.45rem 0.7rem;
+                    color: var(--accent-primary);
+                    background: rgba(91,140,255,0.12);
+                    border: 1px solid rgba(91,140,255,0.18);
+                }
+
+                .class-active-pill {
+                    padding: 0.3rem 0.55rem;
+                    color: #2563eb;
+                    background: rgba(59,130,246,0.12);
+                    border: 1px solid rgba(59,130,246,0.18);
+                }
+
+                .class-item-head {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-bottom: 0.2rem;
+                }
+
                 .class-item,
                 .item-card,
                 .split-card,
@@ -1501,6 +1613,10 @@ export default function LmsWorkspace({ user, section, classId }: Props) {
                     justify-content: space-between;
                     gap: 0.75rem;
                     flex-wrap: wrap;
+                }
+
+                .class-empty-state {
+                    padding: 0.2rem 0 0.2rem;
                 }
 
                 .split-card,
